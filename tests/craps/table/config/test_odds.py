@@ -1,11 +1,11 @@
 import unittest
-from craps.table.config.odds import Odds, UnknownOdds
+from craps.table.config.odds import StandardOdds, CraplessOdds, UnknownOdds
 
 
 class TestOdds(unittest.TestCase):
 
     def test_mirrored(self):
-        odds = Odds.mirrored345()
+        odds = StandardOdds.mirrored345()
         with self.assertRaises(UnknownOdds):
             odds[0]
         with self.assertRaises(UnknownOdds):
@@ -30,7 +30,7 @@ class TestOdds(unittest.TestCase):
     def test_flat(self):
         for i in [2, 3, 5, 10, 100]:
             with self.subTest(i=i):
-                odds = Odds.flat(i)
+                odds = StandardOdds.flat(i)
                 with self.assertRaises(UnknownOdds):
                     odds[0]
                 with self.assertRaises(UnknownOdds):
@@ -55,7 +55,7 @@ class TestOdds(unittest.TestCase):
     def test_flat_crapless(self):
         for i in [2, 3, 5]:
             with self.subTest(i=i):
-                odds = Odds.flat_crapsless(i)
+                odds = CraplessOdds.flat(i)
                 with self.assertRaises(UnknownOdds):
                     odds[0]
                 with self.assertRaises(UnknownOdds):
