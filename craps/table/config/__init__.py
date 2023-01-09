@@ -1,5 +1,8 @@
 from dataclasses import dataclass
+
+import JsonEncoder
 from .odds import Odds, StandardOdds, CraplessOdds
+import json
 
 
 class InconsistentConfig(Exception):
@@ -26,6 +29,23 @@ class Config:
     pay_vig_before_buy: bool = False
     pay_vig_before_lay: bool = False
 
+    @classmethod
+    def from_json(cls, json_str):
+        primitive = json.loads(json_str)
+        if 'odds' in primitive:
+            is_crapless = primitive['is_crapless'] if 'is_crapless' in primitive else False
+            odds_cls = CraplessOdds if is_crapless else StandardOdds
+            if isinstance(primitive['odds'], str):
+                primitive['odds'] = eval('{}.{}'.format(odds_cls.__name__, primitive['odds']))
+            else:
+                primitive['odds'] = {int(key): value for key, value in primitive['odds'].items()}
+                primitive['odds'] = eval('{}({})'.format(odds_cls.__name__, primitive['odds']))
+        return cls(**primitive)
+
+    def as_json(self):
+        diff = self._diff_from_default()
+        return json.dumps(diff, cls=JsonEncoder.ComplexEncoder)
+
     def __post_init__(self):
         if self.is_crapless and not isinstance(self.odds, CraplessOdds):
             raise InconsistentConfig('Crapless Config requires CraplessOdds')
@@ -39,3 +59,28 @@ class Config:
             raise InconsistentConfig("bet_max, if set, must be multiple of 5")
         if self.bet_max and self.bet_max < self.bet_min:
             raise InconsistentConfig("bet_max, if set, must be greater than bet_min")
+        for key in [
+            'bet_max',
+            'bet_min',
+            'dont_bar',
+            'field_12_pay',
+            'field_2_pay',
+            'hard_way_max',
+            'hop_easy_pay_to_one',
+            'hop_hard_pay_to_one',
+            'hop_max',
+            'min_buy_lay',
+            'odds_max',
+        ]:
+            if getattr(self, key) and getattr(self, key) < 0:
+                raise InconsistentConfig('{} Must Be Positive'.format(key))
+
+    def __repr__(self):
+        return "{0}({1})".format(self.__class__.__name__,
+                                 ', '.join(['{}={}'.format(key, repr(val)) for key, val in
+                                            self._diff_from_default().items()])
+                                 )
+
+    def _diff_from_default(self):
+        return {attr: getattr(self, attr) for attr in self.__dict__ if
+                getattr(self, attr) != getattr(self.__class__(), attr)}
