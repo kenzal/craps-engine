@@ -1,12 +1,12 @@
 import unittest
 import json
-from craps.table.config.odds import Odds, StandardOdds, CraplessOdds
+import craps.table.config.odds as ConfigOdds
 
 
 class TestOdds(unittest.TestCase):
 
     def test_mirrored(self):
-        odds = StandardOdds.mirrored345()
+        odds = ConfigOdds.StandardOdds.mirrored345()
         with self.assertRaises(KeyError):
             odds[0]
         with self.assertRaises(KeyError):
@@ -31,7 +31,7 @@ class TestOdds(unittest.TestCase):
     def test_flat(self):
         for i in [2, 3, 5, 10, 100]:
             with self.subTest(i=i):
-                odds = StandardOdds.flat(i)
+                odds = ConfigOdds.StandardOdds.flat(i)
                 with self.assertRaises(KeyError):
                     odds[0]
                 with self.assertRaises(KeyError):
@@ -56,7 +56,7 @@ class TestOdds(unittest.TestCase):
     def test_flat_crapless(self):
         for i in [2, 3, 5]:
             with self.subTest(i=i):
-                odds = CraplessOdds.flat(i)
+                odds = ConfigOdds.CraplessOdds.flat(i)
                 with self.assertRaises(KeyError):
                     odds[0]
                 with self.assertRaises(KeyError):
@@ -77,8 +77,8 @@ class TestOdds(unittest.TestCase):
                     odds[13]
 
     def test_as_json(self):
-        self.assertEqual(json.loads(StandardOdds.mirrored345().as_json()), json.loads('"mirrored345()"'))
-        self.assertEqual(json.loads(StandardOdds.flat(5).as_json()), json.loads('"flat(5)"'))
+        self.assertEqual(json.loads(ConfigOdds.StandardOdds.mirrored345().as_json()), json.loads('"mirrored345()"'))
+        self.assertEqual(json.loads(ConfigOdds.StandardOdds.flat(5).as_json()), json.loads('"flat(5)"'))
 
 
 if __name__ == '__main__':

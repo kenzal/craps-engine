@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-
-import JsonEncoder
 from .odds import Odds, StandardOdds, CraplessOdds
 import json
+import JsonEncoder
 
 
 class InconsistentConfig(Exception):
