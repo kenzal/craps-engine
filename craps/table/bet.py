@@ -334,8 +334,8 @@ class Horn(Prop):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                                              else self._table_config.hop_easy_pay_to_one)
+        return int(self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                  else self._table_config.hop_easy_pay_to_one))
 
 
 class HornHigh(Horn):
@@ -351,10 +351,10 @@ class HornHigh(Horn):
         if not self.is_winner(outcome):
             return 0
         if outcome.total() == self.location:
-            return self.wager / self.multi_bet * 2 * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                                                      else self._table_config.hop_easy_pay_to_one)
-        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                                              else self._table_config.hop_easy_pay_to_one)
+            return int(self.wager / self.multi_bet * 2 * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                          else self._table_config.hop_easy_pay_to_one))
+        return int(self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                  else self._table_config.hop_easy_pay_to_one))
 
 
 class World(Prop):
@@ -369,8 +369,8 @@ class World(Prop):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                                              else self._table_config.hop_easy_pay_to_one)
+        return int(self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                  else self._table_config.hop_easy_pay_to_one))
 
 
 class Craps3Way(Prop):
@@ -382,8 +382,8 @@ class Craps3Way(Prop):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                                              else self._table_config.hop_easy_pay_to_one)
+        return int(self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                  else self._table_config.hop_easy_pay_to_one))
 
 
 class CE(Prop):
@@ -396,5 +396,5 @@ class CE(Prop):
         if not self.is_winner(outcome):
             return 0
         if outcome.total() in [2, 3, 12]:
-            return self.wager / self.multi_bet * 7
-        return self.wager / self.multi_bet * self._table_config.hop_easy_pay_to_one
+            return int(self.wager / self.multi_bet * 7)
+        return int(self.wager / self.multi_bet * self._table_config.hop_easy_pay_to_one)
