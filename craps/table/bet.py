@@ -67,7 +67,7 @@ class Bet:
             raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
 
     def remove_odds(self):
-        self.odds = None
+        self.odds = 0
 
     def is_winner(self, outcome: DiceOutcome) -> bool:
         pass
@@ -395,6 +395,6 @@ class CE(Prop):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        if outcome.total() in [2,3,12]:
+        if outcome.total() in [2, 3, 12]:
             return self.wager / self.multi_bet * 7
         return self.wager / self.multi_bet * self._table_config.hop_easy_pay_to_one
