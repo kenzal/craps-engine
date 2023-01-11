@@ -30,6 +30,7 @@ class Bet:
     single_roll: bool = False
     multi_bet: int = 0
     _override_toggle: typing.Union[BetStatus, None] = None
+    can_take_down = True
 
     def __init__(self, wager: int, puck: Puck, table_config: TableConfig, odds: int = None, location=None):
         if wager <= 0:
@@ -42,13 +43,28 @@ class Bet:
         self.location = location
         if odds:
             if self.allow_odds:
-                self.odds = odds
+                self.set_odds(odds)
             else:
                 raise InvalidBet('Odds not allowed for {} bet'.format(self.__class__.__name__))
         self._check_valid()
 
     def _check_valid(self):
         pass
+
+    def max_odds(self) -> int:
+        return 0
+
+    def set_odds(self, odds: int):
+        max_odds = self.max_odds()
+        if self.allow_odds and 0 < odds <= max_odds:
+            self.odds = odds
+        elif odds > max_odds:
+            raise InvalidBet(f'Odds can not exceed {max_odds} for this bet')
+        else:
+            raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
+
+    def remove_odds(self):
+        self.odds = None
 
     def is_winner(self, outcome: DiceOutcome) -> bool:
         pass
@@ -78,9 +94,13 @@ class Bet:
     def follow_puck(self):
         self._override_toggle = None
 
+    def increase(self, amount: int):
+        self.wager += amount
+
 
 class PassLine(Bet):
     allow_odds = True
+    can_take_down = False
 
     def move(self, location: int):
         if self.location:
@@ -104,6 +124,16 @@ class PassLine(Bet):
         if self.location is None and not self._table_config.is_crapless and outcome.total() == 11:
             return True
         return False
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        true_odds = self._table_config.get_true_odds(self.location) if self.location else 0
+        odds_payout = int(self.odds * true_odds) if self.odds else 0
+        return self.wager + odds_payout
+
+    def max_odds(self) -> int:
+        return int(self._table_config.odds[self.location] * self.wager)
 
 
 class Put(PassLine):
@@ -136,6 +166,21 @@ class DontPass(PassLine):
         if self.location is None and outcome.total() in [7, 11]:
             return True
         return False
+
+    def increase(self, amount: int):
+        raise InvalidBet("Can not increase contract Don't bets")
+
+    def max_odds(self) -> int:
+        pass_odds = self._table_config.get_true_odds(self.location)  # 2/1
+        max_win = int(self._table_config.odds[self.location] * self.wager)  # 3 * 5 = 15
+        return int(max_win * pass_odds)  # 60 / 2 = 30
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        true_odds = self._table_config.get_true_odds(self.location) if self.location else 0
+        odds_payout = int(self.odds / true_odds) if self.odds else 0
+        return self.wager + odds_payout
 
 
 class DontCome(DontPass):

@@ -42,6 +42,8 @@ class TestBet(unittest.TestCase):
         self.assertTrue(bet.is_loser(self.outcomes[2]), 'Loses on Aces')
         self.assertTrue(bet.is_loser(self.outcomes[3]), 'Loses on Three')
         self.assertTrue(bet.is_loser(self.outcomes[12]), 'Loses on Midnight')
+        self.assertEqual(self.wager, bet.get_payout(self.outcomes[7]))
+        self.assertEqual(self.wager, bet.get_payout(self.outcomes[11]))
 
         point_roll = self.outcomes[4]
         other_point = self.outcomes[6]
@@ -62,6 +64,31 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(self.outcomes[12]), 'Does not lose on Midnight')
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
+        self.assertEqual(self.wager, bet.get_payout(point_roll))
+        self.assertEqual(0, bet.get_payout(self.outcomes[11]))
+
+    def test_pass_line_odds_payouts(self):
+        for j, config in enumerate([
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(2)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(5)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(10)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(2)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(3)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(5)),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    outcome = self.outcomes[total]
+                    if total != 7:
+                        with self.subTest(i=total):
+                            bet = table.bet.Come(self.wager, puck=self.puck, table_config=config,
+                                                 location=total)
+                            self.assertEqual(bet.max_odds(), config.odds[total] * self.wager,
+                                             "Max Odds should be the max odds for the place number times the wager")
+                            odds_payout = int(bet.max_odds() * config.get_true_odds(total))
+                            bet.set_odds(bet.max_odds())
+                            self.assertEqual(bet.get_payout(outcome), self.wager + odds_payout)
 
     def test_put(self):
         point_roll = self.outcomes[4]
@@ -89,6 +116,30 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(self.outcomes[12]), 'Does not lose on Midnight')
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
+
+    def test_put_payouts(self):
+        for j, config in enumerate([
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(2)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(5)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(10)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(2)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(3)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(5)),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    outcome = self.outcomes[total]
+                    if total != 7:
+                        with self.subTest(i=total):
+                            bet = table.bet.Put(self.wager, puck=self.puck, table_config=config, location=total)
+                            self.assertTrue(bet.is_winner(outcome))
+                            self.assertEqual(self.wager, bet.get_payout(outcome))
+                            odds_bet = self.wager * 2
+                            odds_payout = int(config.get_true_odds(total) * odds_bet)
+                            bet.set_odds(odds_bet)
+                            payout = bet.get_payout(outcome)
+                            self.assertEqual(payout, self.wager + odds_payout)
 
     def test_come(self):
         bet = table.bet.Come(self.wager, puck=self.puck, table_config=self.table_config)
@@ -132,6 +183,30 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+    def test_come_payouts(self):
+        for j, config in enumerate([
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(2)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(5)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(10)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(2)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(3)),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(5)),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    outcome = self.outcomes[total]
+                    if total != 7:
+                        with self.subTest(i=total):
+                            bet = table.bet.Come(self.wager, puck=self.puck, table_config=config, location=total)
+                            self.assertTrue(bet.is_winner(outcome))
+                            self.assertEqual(self.wager, bet.get_payout(outcome))
+                            odds_bet = self.wager * 2
+                            odds_payout = int(config.get_true_odds(total) * odds_bet)
+                            bet.set_odds(odds_bet)
+                            payout = bet.get_payout(outcome)
+                            self.assertEqual(payout, self.wager + odds_payout)
+
     def test_dont_pass(self):
         bet = table.bet.DontPass(self.wager, puck=self.puck, table_config=self.table_config)
         self.assertTrue(bet.allow_odds)
@@ -169,6 +244,25 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+    def test_dont_pass_max_odds(self):
+        for j, config in enumerate([
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(2)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(5)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(10)),
+        ]):
+            with self.subTest(j=j):
+                seven_out = self.outcomes[7]
+                for total in config.odds.valid_keys():
+                    if total != 7:
+                        with self.subTest(i=total):
+                            wager = 5
+                            bet = table.bet.DontPass(wager, puck=self.puck, table_config=config, location=total)
+                            odds_payout = int(bet.max_odds() / config.get_true_odds(total))
+                            bet.set_odds(bet.max_odds())
+                            self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
+
+
     def test_dont_come(self):
         bet = table.bet.DontCome(self.wager, puck=self.puck, table_config=self.table_config)
         self.assertTrue(bet.allow_odds)
@@ -198,6 +292,24 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(self.outcomes[12]), 'Does not win on Midnight')
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
+
+    def test_dont_come_max_odds(self):
+        for j, config in enumerate([
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(2)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(5)),
+            TableConfig.Config(odds=TableConfig.odds.StandardOdds.flat(10)),
+        ]):
+            with self.subTest(j=j):
+                seven_out = self.outcomes[7]
+                for total in config.odds.valid_keys():
+                    if total != 7:
+                        with self.subTest(i=total):
+                            wager = 5
+                            bet = table.bet.DontCome(wager, puck=self.puck, table_config=config, location=total)
+                            odds_payout = int(bet.max_odds() / config.get_true_odds(total))
+                            bet.set_odds(bet.max_odds())
+                            self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
 
     def test_field(self):
         bet = table.bet.Field(self.wager, puck=self.puck, table_config=self.table_config)

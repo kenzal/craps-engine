@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from .odds import Odds, StandardOdds, CraplessOdds
+from craps.dice import Outcome as DiceOutcome
+import fractions
 import json
 import JsonEncoder
 
@@ -27,6 +29,8 @@ class Config:
     odds_max: int = None
     pay_vig_before_buy: bool = False
     pay_vig_before_lay: bool = False
+    place_2_12_odds = fractions.Fraction(11, 2)
+    place_3_11_odds = fractions.Fraction(11, 4)
 
     @classmethod
     def from_json(cls, json_str):
@@ -44,6 +48,25 @@ class Config:
     def as_json(self):
         diff = self._diff_from_default()
         return json.dumps(diff, cls=JsonEncoder.ComplexEncoder)
+
+    def get_place_odds(self, place: int) -> fractions.Fraction:
+        if place in [6, 8]:
+            return fractions.Fraction(7, 6)
+        if place in [5, 9]:
+            return fractions.Fraction(7, 5)
+        if place in [4, 10]:
+            return fractions.Fraction(9, 5)
+        if place in [3, 11] and self.is_crapless:
+            return self.place_3_11_odds
+        if place in [2, 12] and self.is_crapless:
+            return self.place_2_12_odds
+        raise ValueError('Invalid place bet')
+
+    @staticmethod
+    def get_true_odds(place: int) -> fractions.Fraction:
+        ways_to_win = len([out for out in DiceOutcome.get_all() if out.total() == place])
+        ways_to_lose = len([out for out in DiceOutcome.get_all() if out.total() == 7])
+        return fractions.Fraction(ways_to_lose, ways_to_win)
 
     def __post_init__(self):
         if self.is_crapless and not isinstance(self.odds, CraplessOdds):
