@@ -12,7 +12,7 @@ class TestBet(unittest.TestCase):
     def setUp(self) -> None:
         self.table_config = table.config.Config()
         self.puck = table.puck.Puck(self.table_config)
-        self.wager = 50
+        self.wager = 60
         self.outcomes = {
             2:  Outcome(1, 1),  # Aces
             3:  Outcome(1, 2),  # Ace-Deuce, Shocker
@@ -352,6 +352,237 @@ class TestBet(unittest.TestCase):
                 self.assertFalse(bet.is_on())
                 self.assertFalse(bet.is_winner(outcome))
                 self.assertFalse(bet.is_loser(outcome))
+
+    def test_hard_way(self):
+        bet_hard_outcome = Outcome(2, 2)
+        bet_easy_outcome = Outcome(1, 3)
+        self.assertEqual(bet_easy_outcome.total(), bet_hard_outcome.total())
+        self.assertNotEqual(bet_easy_outcome, bet_hard_outcome)
+        self.assertFalse(bet_easy_outcome.is_hard())
+        self.assertTrue(bet_hard_outcome.is_hard())
+        other_outcome = self.outcomes[6]
+        bet = table.bet.HardWay(self.wager,
+                                puck=self.puck,
+                                location=bet_hard_outcome.total(),
+                                table_config=self.table_config)
+        self.assertFalse(bet.allow_odds)
+        self.assertTrue(bet.can_toggle)
+        self.assertFalse(bet.has_vig)
+        self.assertFalse(bet.multi_bet)
+        self.assertFalse(bet.single_roll)
+        self.assertEqual(bet.wager, self.wager)
+        self.assertIsNone(bet.odds)
+
+        # Puck is Off, bet following puck
+        for outcome in [bet_hard_outcome, bet_easy_outcome, other_outcome, self.outcomes[7]]:
+            with self.subTest("No effect when puck is off and bet follows puck",
+                              i=outcome.total()):
+                self.assertFalse(bet.is_on())
+                self.assertFalse(bet.is_winner(outcome))
+                self.assertFalse(bet.is_loser(outcome))
+
+        self.puck.place(bet_hard_outcome.total())  # puck is on, bet following puck
+        self.assertTrue(bet.is_winner(bet_hard_outcome))
+        self.assertFalse(bet.is_loser(bet_hard_outcome))
+        self.assertTrue(bet.is_loser(bet_easy_outcome))
+        self.assertFalse(bet.is_winner(bet_easy_outcome))
+        self.assertFalse(bet.is_winner(other_outcome))
+        self.assertFalse(bet.is_loser(other_outcome))
+
+        bet.turn_off()  # puck is on, but hardway is off
+        for outcome in [bet_hard_outcome, bet_easy_outcome, other_outcome, self.outcomes[7]]:
+            with self.subTest("No effect when puck is off and bet follows puck",
+                              i=outcome.total()):
+                self.assertFalse(bet.is_on())
+                self.assertFalse(bet.is_winner(outcome))
+                self.assertFalse(bet.is_loser(outcome))
+
+        bet.turn_on()
+        self.puck.remove()  # puck is off, but bet is on
+
+        self.puck.place(bet_hard_outcome.total())  # puck is on, bet following puck
+        self.assertTrue(bet.is_winner(bet_hard_outcome))
+        self.assertFalse(bet.is_loser(bet_hard_outcome))
+        self.assertTrue(bet.is_loser(bet_easy_outcome))
+        self.assertFalse(bet.is_winner(bet_easy_outcome))
+        self.assertFalse(bet.is_winner(other_outcome))
+        self.assertFalse(bet.is_loser(other_outcome))
+
+    def test_any_seven(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("All Totals of Seven should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.AnySeven(self.wager,
+                                         puck=self.puck,
+                                         table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertFalse(bet.multi_bet)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() == 7:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
+
+    def test_any_craps(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("All Craps should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.AnyCraps(self.wager,
+                                         puck=self.puck,
+                                         table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertFalse(bet.multi_bet)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() in [2, 3, 12]:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
+
+    def test_hop(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest(i=i):
+                bet = table.bet.Hop(self.wager,
+                                    puck=self.puck,
+                                    table_config=self.table_config,
+                                    outcome=outcome)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertFalse(bet.multi_bet)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                for j, test_outcome in enumerate(Outcome.get_all()):
+                    with self.subTest("Only when outcome is test outcome should win, otherwise, lose",
+                                      j=j):
+                        if outcome == test_outcome:
+                            self.assertTrue(bet.is_winner(test_outcome))
+                            self.assertFalse(bet.is_loser(test_outcome))
+                        else:
+                            self.assertTrue(bet.is_loser(test_outcome))
+                            self.assertFalse(bet.is_winner(test_outcome))
+
+    def test_horn(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("Horn bets should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.Horn(self.wager,
+                                     puck=self.puck,
+                                     table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertEqual(bet.multi_bet, 4)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() in [2, 3, 11, 12]:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
+
+    def test_horn_high(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("Horn bets should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.HornHigh(self.wager,
+                                         puck=self.puck,
+                                         location=11,  # Horn High Yo
+                                         table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertEqual(bet.multi_bet, 5)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() in [2, 3, 11, 12]:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
+
+    def test_world(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("Horn bets should win, 7 pushes, otherwise, lose",
+                              i=i):
+                bet = table.bet.World(self.wager,
+                                      puck=self.puck,
+                                      table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertEqual(bet.multi_bet, 5)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() == 7:  # Push Bet
+                    self.assertFalse(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    if outcome.total() in [2, 3, 11, 12]:  # Win
+                        self.assertTrue(bet.is_winner(outcome))
+                        self.assertFalse(bet.is_loser(outcome))
+                    else:  # Lose
+                        self.assertTrue(bet.is_loser(outcome))
+                        self.assertFalse(bet.is_winner(outcome))
+
+    def test_craps_3_way(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("Craps bets should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.Craps3Way(self.wager,
+                                          puck=self.puck,
+                                          table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertEqual(bet.multi_bet, 3)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() in [2, 3, 12]:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
+
+    def test_c_and_e(self):
+        for i, outcome in enumerate(Outcome.get_all()):
+            with self.subTest("Horn bets should win, otherwise, lose",
+                              i=i):
+                bet = table.bet.CE(self.wager,
+                                   puck=self.puck,
+                                   table_config=self.table_config)
+                self.assertFalse(bet.allow_odds)
+                self.assertFalse(bet.can_toggle)
+                self.assertFalse(bet.has_vig)
+                self.assertEqual(bet.multi_bet, 2)
+                self.assertTrue(bet.single_roll)
+                self.assertEqual(bet.wager, self.wager)
+                self.assertIsNone(bet.odds)
+                if outcome.total() in [2, 3, 11, 12]:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                else:
+                    self.assertTrue(bet.is_loser(outcome))
+                    self.assertFalse(bet.is_winner(outcome))
 
 
 if __name__ == '__main__':

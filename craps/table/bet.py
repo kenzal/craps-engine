@@ -169,6 +169,24 @@ class Buy(Place):
     has_vig = True
 
 
+class Lay(Bet):
+    has_vig = True
+    _override_toggle = BetStatus.ON
+    can_toggle = True
+
+    def is_winner(self, outcome: DiceOutcome):
+        return self.is_on() and outcome.total() == 7
+
+    def is_loser(self, outcome: DiceOutcome) -> bool:
+        return self.is_on() and outcome.total() == self.location
+
+    def _check_valid(self):
+        if not self.location:
+            raise InvalidBet('{0} bet requires a location'.format(self.__class__.__name__))
+        if self.location not in self._table_config.odds.valid_keys():
+            raise InvalidBet('{1} is not a valid location for a {0} bet'.format(self.__class__.__name__, self.location))
+
+
 class HardWay(Bet):
     can_toggle = True
 
@@ -245,26 +263,8 @@ class Craps3Way(Prop):
         return outcome.total() in [2, 3, 12]
 
 
-class CnE(Prop):
+class CE(Prop):
     multi_bet = 2
 
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 11, 12]
-
-
-class Lay(Bet):
-    has_vig = True
-    _override_toggle = BetStatus.ON
-    can_toggle = True
-
-    def is_winner(self, outcome: DiceOutcome):
-        return self.is_on() and outcome.total() == 7
-
-    def is_loser(self, outcome: DiceOutcome) -> bool:
-        return self.is_on() and outcome.total() == self.location
-
-    def _check_valid(self):
-        if not self.location:
-            raise InvalidBet('{0} bet requires a location'.format(self.__class__.__name__))
-        if self.location not in self._table_config.odds.valid_keys():
-            raise InvalidBet('{1} is not a valid location for a {0} bet'.format(self.__class__.__name__, self.location))
