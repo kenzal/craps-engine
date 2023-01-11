@@ -262,7 +262,6 @@ class TestBet(unittest.TestCase):
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
 
-
     def test_dont_come(self):
         bet = table.bet.DontCome(self.wager, puck=self.puck, table_config=self.table_config)
         self.assertTrue(bet.allow_odds)
@@ -321,12 +320,31 @@ class TestBet(unittest.TestCase):
         self.assertEqual(bet.wager, self.wager)
         self.assertIsNone(bet.odds)
 
-        for outcome in self.outcomes.values():
-            with self.subTest(i=outcome.total()):
-                self.assertTrue(bet.is_winner(outcome)) if outcome.total() in [2, 3, 4, 9, 10, 11, 12] \
-                    else self.assertFalse(bet.is_winner(outcome))
-                self.assertTrue(bet.is_loser(outcome)) if outcome.total() in [5, 6, 7, 8] \
-                    else self.assertFalse(bet.is_loser(outcome))
+        for j, config in enumerate([
+            TableConfig.Config(field_2_pay=2, field_12_pay=2),
+            TableConfig.Config(field_2_pay=2, field_12_pay=3),
+            TableConfig.Config(field_2_pay=3, field_12_pay=2),
+            TableConfig.Config(field_2_pay=3, field_12_pay=3),
+        ]):
+            with self.subTest(j=j):
+                for outcome in self.outcomes.values():
+                    with self.subTest(i=outcome.total()):
+                        bet = table.bet.Field(self.wager, puck=self.puck, table_config=config)
+                        if outcome.total() in [3, 4, 9, 10, 11]:
+                            self.assertTrue(bet.is_winner(outcome))
+                            self.assertFalse(bet.is_loser(outcome))
+                            self.assertEqual(bet.get_payout(outcome), self.wager)
+                        elif outcome.total() == 2:
+                            self.assertTrue(bet.is_winner(outcome))
+                            self.assertFalse(bet.is_loser(outcome))
+                            self.assertEqual(bet.get_payout(outcome), self.wager * config.field_2_pay)
+                        elif outcome.total() == 12:
+                            self.assertTrue(bet.is_winner(outcome))
+                            self.assertFalse(bet.is_loser(outcome))
+                            self.assertEqual(bet.get_payout(outcome), self.wager * config.field_12_pay)
+                        else:
+                            self.assertTrue(bet.is_loser(outcome))
+                            self.assertFalse(bet.is_winner(outcome))
 
     def test_place(self):
         place_outcome = self.outcomes[4]
@@ -382,6 +400,20 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(seven_outcome))
         self.assertTrue(bet.is_loser(seven_outcome))
 
+    def test_place_payouts(self):
+        self.puck.place(6)
+        for j, config in enumerate([
+            TableConfig.Config(pay_vig_before_buy=True),
+            TableConfig.Config(pay_vig_before_buy=False),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    outcome = self.outcomes[total]
+                    with self.subTest(i=total):
+                        bet = table.bet.Place(self.wager, puck=self.puck, table_config=config, location=total)
+                        self.assertTrue(bet.is_winner(outcome))
+                        self.assertEqual(bet.get_payout(outcome), int(self.wager * config.get_place_odds(total)))
+
     def test_buy(self):
         place_outcome = self.outcomes[4]
         other_outcome = self.outcomes[6]
@@ -433,6 +465,21 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(seven_outcome))
         self.assertTrue(bet.is_loser(seven_outcome))
 
+    def test_buy_payouts(self):
+        self.puck.place(6)
+        for j, config in enumerate([
+            TableConfig.Config(pay_vig_before_buy=True),
+            TableConfig.Config(pay_vig_before_buy=False),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    outcome = self.outcomes[total]
+                    with self.subTest(i=total):
+                        bet = table.bet.Buy(self.wager, puck=self.puck, table_config=config, location=total)
+                        self.assertTrue(bet.is_winner(outcome))
+                        self.assertEqual(bet.get_payout(outcome),
+                                         int(self.wager * config.get_true_odds(total)) - bet.get_vig())
+
     def test_lay(self):
         place_outcome = self.outcomes[4]
         other_outcome = self.outcomes[6]
@@ -465,6 +512,22 @@ class TestBet(unittest.TestCase):
                 self.assertFalse(bet.is_on())
                 self.assertFalse(bet.is_winner(outcome))
                 self.assertFalse(bet.is_loser(outcome))
+
+    def test_lay_payouts(self):
+        for j, config in enumerate([
+            TableConfig.Config(pay_vig_before_lay=False),
+            TableConfig.Config(pay_vig_before_lay=True),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(2), pay_vig_before_lay=False),
+            TableConfig.Config(is_crapless=True, odds=TableConfig.odds.CraplessOdds.flat(2), pay_vig_before_lay=True),
+        ]):
+            with self.subTest(j=j):
+                for total in config.odds.valid_keys():
+                    seven_out = self.outcomes[7]
+                    with self.subTest(i=total):
+                        bet = table.bet.Lay(self.wager, puck=self.puck, table_config=config, location=total)
+                        self.assertTrue(bet.is_winner(seven_out))
+                        self.assertEqual(bet.get_payout(seven_out),
+                                         int(self.wager / config.get_true_odds(total)) - bet.get_vig())
 
     def test_hard_way(self):
         bet_hard_outcome = Outcome(2, 2)

@@ -54,6 +54,9 @@ class Bet:
     def max_odds(self) -> int:
         return 0
 
+    def get_vig(self) -> int:
+        return int(self.wager * .05) if self.has_vig else 0
+
     def set_odds(self, odds: int):
         max_odds = self.max_odds()
         if self.allow_odds and 0 < odds <= max_odds:
@@ -193,9 +196,23 @@ class Field(Bet):
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 4, 9, 10, 11, 12]
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        if outcome.total() == 2:
+            return self.wager * self._table_config.field_2_pay
+        if outcome.total() == 12:
+            return self.wager * self._table_config.field_12_pay
+        return self.wager
+
 
 class Place(Bet):
     can_toggle = True
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return int(self.wager * self._table_config.get_place_odds(outcome.total()))
 
     def is_loser(self, outcome: DiceOutcome):
         return self.is_on() and outcome.total() == 7
@@ -212,6 +229,11 @@ class Place(Bet):
 
 class Buy(Place):
     has_vig = True
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return int(self.wager * self._table_config.get_true_odds(outcome.total())) - self.get_vig()
 
 
 class Lay(Bet):
@@ -230,6 +252,14 @@ class Lay(Bet):
             raise InvalidBet('{0} bet requires a location'.format(self.__class__.__name__))
         if self.location not in self._table_config.odds.valid_keys():
             raise InvalidBet('{1} is not a valid location for a {0} bet'.format(self.__class__.__name__, self.location))
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return int(self.wager / self._table_config.get_true_odds(self.location)) - self.get_vig()
+
+    def get_vig(self) -> int:
+        return int(self.wager / self._table_config.get_true_odds(self.location) * .05) if self.has_vig else 0
 
 
 class HardWay(Bet):
