@@ -1,10 +1,10 @@
-import json
 import unittest
 import craps.table.puck
 import craps.table.config as TableConfig
 import craps.table.config.odds as ConfigOdds
 
 
+# noinspection DuplicateAssertionTestSmellUnittest
 class TestConfig(unittest.TestCase):
 
     def test_default(self):

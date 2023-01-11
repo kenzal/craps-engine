@@ -4,6 +4,7 @@ import craps.table.config as TableConfig
 from craps.dice import Outcome
 
 
+# noinspection DuplicateAssertionTestSmellUnittest
 class TestBet(unittest.TestCase):
     puck: table.puck.Puck
     table_config: TableConfig
@@ -66,7 +67,7 @@ class TestBet(unittest.TestCase):
         point_roll = self.outcomes[4]
         other_point = self.outcomes[6]
         bet = table.bet.Put(self.wager, puck=self.puck, table_config=self.table_config,
-                            location=self.outcomes[4].total())
+                            location=point_roll.total())
         self.assertTrue(bet.allow_odds)
         self.assertFalse(bet.can_toggle)
         self.assertFalse(bet.has_vig)
