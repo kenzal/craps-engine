@@ -277,6 +277,11 @@ class HardWay(Bet):
     def is_loser(self, outcome: DiceOutcome):
         return self.is_on() and outcome.total() == self.location and not outcome.is_hard()
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager * (7 if outcome.total() in [4, 10] else 9)
+
 
 class Prop(Bet):
     single_roll = True
@@ -286,10 +291,20 @@ class AnySeven(Prop):
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() == 7
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager * 4
+
 
 class AnyCraps(Prop):
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 12]
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager * 7
 
 
 class Hop(Prop):
@@ -303,12 +318,24 @@ class Hop(Prop):
     def is_winner(self, outcome: DiceOutcome):
         return outcome == self.outcome
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                             else self._table_config.hop_easy_pay_to_one)
+
 
 class Horn(Prop):
     multi_bet = 4
 
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 11, 12]
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                              else self._table_config.hop_easy_pay_to_one)
 
 
 class HornHigh(Horn):
@@ -320,6 +347,15 @@ class HornHigh(Horn):
         if self.location not in [2, 3, 11, 12]:
             raise InvalidBet('{1} is not a valid location for a {0} bet'.format(self.__class__.__name__, self.location))
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        if outcome.total() == self.location:
+            return self.wager / self.multi_bet * 2 * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                      else self._table_config.hop_easy_pay_to_one)
+        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                              else self._table_config.hop_easy_pay_to_one)
+
 
 class World(Prop):
     multi_bet = 5
@@ -330,6 +366,12 @@ class World(Prop):
     def is_loser(self, outcome: DiceOutcome):
         return outcome.total() not in [2, 3, 7, 11, 12]
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                              else self._table_config.hop_easy_pay_to_one)
+
 
 class Craps3Way(Prop):
     multi_bet = 3
@@ -337,9 +379,22 @@ class Craps3Way(Prop):
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 12]
 
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        return self.wager / self.multi_bet * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                              else self._table_config.hop_easy_pay_to_one)
+
 
 class CE(Prop):
     multi_bet = 2
 
     def is_winner(self, outcome: DiceOutcome):
         return outcome.total() in [2, 3, 11, 12]
+
+    def get_payout(self, outcome: DiceOutcome) -> int:
+        if not self.is_winner(outcome):
+            return 0
+        if outcome.total() in [2,3,12]:
+            return self.wager / self.multi_bet * 7
+        return self.wager / self.multi_bet * self._table_config.hop_easy_pay_to_one

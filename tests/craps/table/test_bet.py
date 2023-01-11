@@ -584,6 +584,22 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_outcome))
         self.assertFalse(bet.is_loser(other_outcome))
 
+    def test_hard_ways_payout(self):
+        for outcome in [
+            Outcome(2, 2),
+            Outcome(3, 3),
+            Outcome(4, 4),
+            Outcome(5, 5),
+        ]:
+            with self.subTest(i=outcome.total()):
+                bet = table.bet.HardWay(self.wager,
+                                        puck=self.puck,
+                                        table_config=self.table_config,
+                                        location=outcome.total())
+                bet.turn_on()
+                self.assertTrue(bet.is_winner(outcome))
+                self.assertEqual(bet.get_payout(outcome), self.wager * (7 if outcome.total() in [4, 10] else 9))
+
     def test_any_seven(self):
         for i, outcome in enumerate(Outcome.get_all()):
             with self.subTest("All Totals of Seven should win, otherwise, lose",
@@ -601,6 +617,7 @@ class TestBet(unittest.TestCase):
                 if outcome.total() == 7:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome), self.wager * 4)
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
@@ -622,6 +639,7 @@ class TestBet(unittest.TestCase):
                 if outcome.total() in [2, 3, 12]:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome), self.wager * 7)
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
@@ -646,6 +664,10 @@ class TestBet(unittest.TestCase):
                         if outcome == test_outcome:
                             self.assertTrue(bet.is_winner(test_outcome))
                             self.assertFalse(bet.is_loser(test_outcome))
+                            self.assertEqual(bet.get_payout(test_outcome),
+                                             self.wager * (self.table_config.hop_hard_pay_to_one if
+                                                           test_outcome.is_hard()
+                                                           else self.table_config.hop_easy_pay_to_one))
                         else:
                             self.assertTrue(bet.is_loser(test_outcome))
                             self.assertFalse(bet.is_winner(test_outcome))
@@ -667,6 +689,9 @@ class TestBet(unittest.TestCase):
                 if outcome.total() in [2, 3, 11, 12]:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome),
+                                     self.wager / 4 * (self.table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                       else self.table_config.hop_easy_pay_to_one))
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
@@ -686,9 +711,18 @@ class TestBet(unittest.TestCase):
                 self.assertTrue(bet.single_roll)
                 self.assertEqual(bet.wager, self.wager)
                 self.assertIsNone(bet.odds)
-                if outcome.total() in [2, 3, 11, 12]:
+                if outcome.total() in [2, 3, 12]:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome),
+                                     self.wager / 5 * (self.table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                       else self.table_config.hop_easy_pay_to_one))
+                elif outcome.total() == 11:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome),
+                                     self.wager / 5 * 2 * (self.table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                           else self.table_config.hop_easy_pay_to_one))
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
@@ -714,6 +748,9 @@ class TestBet(unittest.TestCase):
                     if outcome.total() in [2, 3, 11, 12]:  # Win
                         self.assertTrue(bet.is_winner(outcome))
                         self.assertFalse(bet.is_loser(outcome))
+                        self.assertEqual(bet.get_payout(outcome),
+                                         self.wager / 5 * (self.table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                           else self.table_config.hop_easy_pay_to_one))
                     else:  # Lose
                         self.assertTrue(bet.is_loser(outcome))
                         self.assertFalse(bet.is_winner(outcome))
@@ -735,6 +772,9 @@ class TestBet(unittest.TestCase):
                 if outcome.total() in [2, 3, 12]:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome),
+                                     self.wager / 3 * (self.table_config.hop_hard_pay_to_one if outcome.is_hard()
+                                                       else self.table_config.hop_easy_pay_to_one))
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
@@ -753,9 +793,14 @@ class TestBet(unittest.TestCase):
                 self.assertTrue(bet.single_roll)
                 self.assertEqual(bet.wager, self.wager)
                 self.assertIsNone(bet.odds)
-                if outcome.total() in [2, 3, 11, 12]:
+                if outcome.total() in [2, 3, 12]:
                     self.assertTrue(bet.is_winner(outcome))
                     self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome), self.wager / 2 * 7)
+                elif outcome.total() == 11:
+                    self.assertTrue(bet.is_winner(outcome))
+                    self.assertFalse(bet.is_loser(outcome))
+                    self.assertEqual(bet.get_payout(outcome), self.wager / 2 * self.table_config.hop_easy_pay_to_one)
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
