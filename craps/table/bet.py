@@ -1,3 +1,5 @@
+import dataclasses
+
 from craps.table.puck import Puck
 from craps.dice import Outcome as DiceOutcome
 from enum import Enum
@@ -16,6 +18,15 @@ class InvalidBet(Exception):
 
 class BadBetAction(Exception):
     pass
+
+
+@dataclasses.dataclass(frozen=True)
+class BetSignature:
+    type: type
+    wager: int
+    odds: int = None
+    placement: typing.Union[None, int, DiceOutcome] = None
+    override_toggle: typing.Union[BetStatus, None] = None
 
 
 class Bet:
@@ -47,6 +58,28 @@ class Bet:
             else:
                 raise InvalidBet('Odds not allowed for {} bet'.format(self.__class__.__name__))
         self._check_valid()
+
+    def get_signature(self):
+        if self.__class__ == Bet:
+            raise TypeError('Cannot create signature of Bet Class')
+        return BetSignature(type=self.__class__,
+                            wager=self.wager,
+                            odds=self.odds,
+                            placement=self.location,
+                            override_toggle=self._override_toggle)
+
+    @classmethod
+    def from_signature(cls, signature: BetSignature, puck: Puck, table_config: TableConfig):
+        if cls == Bet:
+            return signature.type.from_signature(signature=signature, puck=puck, table_config=table_config)
+        bet = cls(wager=signature.wager,
+                   puck=puck,
+                   table_config=table_config,
+                   odds=signature.odds,
+                   location=signature.placement)
+        if signature.override_toggle is not None:
+            bet._override_toggle = signature.override_toggle
+        return bet
 
     def _check_valid(self):
         pass
@@ -99,6 +132,9 @@ class Bet:
 
     def increase(self, amount: int):
         self.wager += amount
+
+    def __eq__(self, other):
+        return self.__class__ == other.__class__ and dir(self) == dir(other)
 
 
 class PassLine(Bet):
@@ -286,6 +322,11 @@ class HardWay(Bet):
 class Prop(Bet):
     single_roll = True
 
+    def get_signature(self):
+        if self.__class__ == Prop:
+            raise TypeError('Cannot create signature of Prop Class')
+        return super().get_signature()
+
 
 class AnySeven(Prop):
     def is_winner(self, outcome: DiceOutcome):
@@ -323,6 +364,16 @@ class Hop(Prop):
             return 0
         return self.wager * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
                              else self._table_config.hop_easy_pay_to_one)
+
+    def get_signature(self):
+        return BetSignature(type=self.__class__, wager=self.wager, odds=self.odds, placement=self.outcome)
+
+    @classmethod
+    def from_signature(cls, signature: BetSignature, puck: Puck, table_config: TableConfig):
+        return cls(wager=signature.wager,
+                   puck=puck,
+                   table_config=table_config,
+                   outcome=signature.placement)
 
 
 class Horn(Prop):

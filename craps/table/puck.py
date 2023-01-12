@@ -7,7 +7,7 @@ class IllegalMove(Exception):
     pass
 
 
-class Puck():
+class Puck:
     _location: typing.Union[int, None] = None
 
     def __init__(self, table_config: Config):

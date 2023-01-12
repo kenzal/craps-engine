@@ -67,6 +67,12 @@ class TestBet(unittest.TestCase):
         self.assertEqual(self.wager, bet.get_payout(point_roll))
         self.assertEqual(0, bet.get_payout(self.outcomes[11]))
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_pass_line_odds_payouts(self):
         for j, config in enumerate([
             TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
@@ -89,6 +95,12 @@ class TestBet(unittest.TestCase):
                             odds_payout = int(bet.max_odds() * config.get_true_odds(total))
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(outcome), self.wager + odds_payout)
+
+                            signature = bet.get_signature()
+                            reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                             puck=bet._puck,
+                                                                             table_config=bet._table_config)
+                            self.assertEqual(bet, reconstructed_bet)
 
     def test_put(self):
         point_roll = self.outcomes[4]
@@ -117,6 +129,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_put_payouts(self):
         for j, config in enumerate([
             TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
@@ -140,6 +158,12 @@ class TestBet(unittest.TestCase):
                             bet.set_odds(odds_bet)
                             payout = bet.get_payout(outcome)
                             self.assertEqual(payout, self.wager + odds_payout)
+
+                            signature = bet.get_signature()
+                            reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                             puck=bet._puck,
+                                                                             table_config=bet._table_config)
+                            self.assertEqual(bet, reconstructed_bet)
 
     def test_come(self):
         bet = table.bet.Come(self.wager, puck=self.puck, table_config=self.table_config)
@@ -183,6 +207,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_come_payouts(self):
         for j, config in enumerate([
             TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
@@ -206,6 +236,12 @@ class TestBet(unittest.TestCase):
                             bet.set_odds(odds_bet)
                             payout = bet.get_payout(outcome)
                             self.assertEqual(payout, self.wager + odds_payout)
+
+                            signature = bet.get_signature()
+                            reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                             puck=bet._puck,
+                                                                             table_config=bet._table_config)
+                            self.assertEqual(bet, reconstructed_bet)
 
     def test_dont_pass(self):
         bet = table.bet.DontPass(self.wager, puck=self.puck, table_config=self.table_config)
@@ -244,6 +280,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_dont_pass_max_odds(self):
         for j, config in enumerate([
             TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
@@ -261,6 +303,12 @@ class TestBet(unittest.TestCase):
                             odds_payout = int(bet.max_odds() / config.get_true_odds(total))
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
+
+                            signature = bet.get_signature()
+                            reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                             puck=bet._puck,
+                                                                             table_config=bet._table_config)
+                            self.assertEqual(bet, reconstructed_bet)
 
     def test_dont_come(self):
         bet = table.bet.DontCome(self.wager, puck=self.puck, table_config=self.table_config)
@@ -292,6 +340,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_point), 'Does not win on other point')
         self.assertFalse(bet.is_loser(other_point), 'Does not lose on other point')
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_dont_come_max_odds(self):
         for j, config in enumerate([
             TableConfig.Config(odds=TableConfig.odds.StandardOdds.mirrored345()),
@@ -309,6 +363,12 @@ class TestBet(unittest.TestCase):
                             odds_payout = int(bet.max_odds() / config.get_true_odds(total))
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
+
+                            signature = bet.get_signature()
+                            reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                             puck=bet._puck,
+                                                                             table_config=bet._table_config)
+                            self.assertEqual(bet, reconstructed_bet)
 
     def test_field(self):
         bet = table.bet.Field(self.wager, puck=self.puck, table_config=self.table_config)
@@ -345,6 +405,12 @@ class TestBet(unittest.TestCase):
                         else:
                             self.assertTrue(bet.is_loser(outcome))
                             self.assertFalse(bet.is_winner(outcome))
+
+                        signature = bet.get_signature()
+                        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                         puck=bet._puck,
+                                                                         table_config=bet._table_config)
+                        self.assertEqual(bet, reconstructed_bet)
 
     def test_place(self):
         place_outcome = self.outcomes[4]
@@ -400,6 +466,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(seven_outcome))
         self.assertTrue(bet.is_loser(seven_outcome))
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_place_payouts(self):
         self.puck.place(6)
         for j, config in enumerate([
@@ -413,6 +485,12 @@ class TestBet(unittest.TestCase):
                         bet = table.bet.Place(self.wager, puck=self.puck, table_config=config, location=total)
                         self.assertTrue(bet.is_winner(outcome))
                         self.assertEqual(bet.get_payout(outcome), int(self.wager * config.get_place_odds(total)))
+
+                        signature = bet.get_signature()
+                        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                         puck=bet._puck,
+                                                                         table_config=bet._table_config)
+                        self.assertEqual(bet, reconstructed_bet)
 
     def test_buy(self):
         place_outcome = self.outcomes[4]
@@ -465,6 +543,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(seven_outcome))
         self.assertTrue(bet.is_loser(seven_outcome))
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_buy_payouts(self):
         self.puck.place(6)
         for j, config in enumerate([
@@ -479,6 +563,12 @@ class TestBet(unittest.TestCase):
                         self.assertTrue(bet.is_winner(outcome))
                         self.assertEqual(bet.get_payout(outcome),
                                          int(self.wager * config.get_true_odds(total)) - bet.get_vig())
+
+                        signature = bet.get_signature()
+                        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                         puck=bet._puck,
+                                                                         table_config=bet._table_config)
+                        self.assertEqual(bet, reconstructed_bet)
 
     def test_lay(self):
         place_outcome = self.outcomes[4]
@@ -529,6 +619,12 @@ class TestBet(unittest.TestCase):
                         self.assertEqual(bet.get_payout(seven_out),
                                          int(self.wager / config.get_true_odds(total)) - bet.get_vig())
 
+                        signature = bet.get_signature()
+                        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                         puck=bet._puck,
+                                                                         table_config=bet._table_config)
+                        self.assertEqual(bet, reconstructed_bet)
+
     def test_hard_way(self):
         bet_hard_outcome = Outcome(2, 2)
         bet_easy_outcome = Outcome(1, 3)
@@ -565,7 +661,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_outcome))
         self.assertFalse(bet.is_loser(other_outcome))
 
-        bet.turn_off()  # puck is on, but hardway is off
+        bet.turn_off()  # puck is on, but hard way is off
         for outcome in [bet_hard_outcome, bet_easy_outcome, other_outcome, self.outcomes[7]]:
             with self.subTest("No effect when puck is off and bet follows puck",
                               i=outcome.total()):
@@ -584,6 +680,12 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_winner(other_outcome))
         self.assertFalse(bet.is_loser(other_outcome))
 
+        signature = bet.get_signature()
+        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                         puck=bet._puck,
+                                                         table_config=bet._table_config)
+        self.assertEqual(bet, reconstructed_bet)
+
     def test_hard_ways_payout(self):
         for outcome in [
             Outcome(2, 2),
@@ -599,6 +701,12 @@ class TestBet(unittest.TestCase):
                 bet.turn_on()
                 self.assertTrue(bet.is_winner(outcome))
                 self.assertEqual(bet.get_payout(outcome), self.wager * (7 if outcome.total() in [4, 10] else 9))
+
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
 
     def test_any_seven(self):
         for i, outcome in enumerate(Outcome.get_all()):
@@ -622,6 +730,12 @@ class TestBet(unittest.TestCase):
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
 
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
+
     def test_any_craps(self):
         for i, outcome in enumerate(Outcome.get_all()):
             with self.subTest("All Craps should win, otherwise, lose",
@@ -643,6 +757,12 @@ class TestBet(unittest.TestCase):
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
+
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
 
     def test_hop(self):
         for i, outcome in enumerate(Outcome.get_all()):
@@ -672,6 +792,12 @@ class TestBet(unittest.TestCase):
                             self.assertTrue(bet.is_loser(test_outcome))
                             self.assertFalse(bet.is_winner(test_outcome))
 
+                        signature = bet.get_signature()
+                        reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                         puck=bet._puck,
+                                                                         table_config=bet._table_config)
+                        self.assertEqual(bet, reconstructed_bet)
+
     def test_horn(self):
         for i, outcome in enumerate(Outcome.get_all()):
             with self.subTest("Horn bets should win, otherwise, lose",
@@ -695,6 +821,12 @@ class TestBet(unittest.TestCase):
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
+
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
 
     def test_horn_high(self):
         for i, outcome in enumerate(Outcome.get_all()):
@@ -727,6 +859,12 @@ class TestBet(unittest.TestCase):
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
 
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
+
     def test_world(self):
         for i, outcome in enumerate(Outcome.get_all()):
             with self.subTest("Horn bets should win, 7 pushes, otherwise, lose",
@@ -754,6 +892,12 @@ class TestBet(unittest.TestCase):
                     else:  # Lose
                         self.assertTrue(bet.is_loser(outcome))
                         self.assertFalse(bet.is_winner(outcome))
+
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
 
     def test_craps_3_way(self):
         for i, outcome in enumerate(Outcome.get_all()):
@@ -804,6 +948,12 @@ class TestBet(unittest.TestCase):
                 else:
                     self.assertTrue(bet.is_loser(outcome))
                     self.assertFalse(bet.is_winner(outcome))
+
+                signature = bet.get_signature()
+                reconstructed_bet = table.bet.Bet.from_signature(signature=signature,
+                                                                 puck=bet._puck,
+                                                                 table_config=bet._table_config)
+                self.assertEqual(bet, reconstructed_bet)
 
 
 if __name__ == '__main__':
