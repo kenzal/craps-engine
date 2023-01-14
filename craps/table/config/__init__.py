@@ -29,12 +29,17 @@ class Config:
     odds_max: int = None
     pay_vig_before_buy: bool = False
     pay_vig_before_lay: bool = False
-    place_2_12_odds = fractions.Fraction(11, 2)
-    place_3_11_odds = fractions.Fraction(11, 4)
+    place_2_12_odds: fractions.Fraction = fractions.Fraction(11, 2)
+    place_3_11_odds: fractions.Fraction = fractions.Fraction(11, 4)
 
     @classmethod
-    def from_json(cls, json_str):
-        primitive = json.loads(json_str)
+    def from_json(cls, primitive):
+        if isinstance(primitive, str):
+            primitive = json.loads(primitive)
+        if 'place_2_12_odds' in primitive:
+            primitive['place_2_12_odds'] = fractions.Fraction(*primitive['place_2_12_odds'])
+        if 'place_3_11_odds' in primitive:
+            primitive['place_3_11_odds'] = fractions.Fraction(*primitive['place_3_11_odds'])
         if 'odds' in primitive:
             is_crapless = primitive['is_crapless'] if 'is_crapless' in primitive else False
             odds_cls = CraplessOdds if is_crapless else StandardOdds

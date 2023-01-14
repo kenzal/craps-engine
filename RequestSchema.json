@@ -2,5 +2,412 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "title": "Craps Request Schema",
     "description": "This schema is used to make requests of the craps engine.",
-    "type": "object"
+    "type": "object",
+    "properties": {
+        "table": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "type": "object",
+                    "properties": {
+                        "allow_buy_59": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "allow_put": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "bet_max": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "bet_min": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 5
+                        },
+                        "dont_bar": {
+                            "enum": [
+                                2,
+                                12
+                            ]
+                        },
+                        "field_12_pay": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 3
+                        },
+                        "field_2_pay": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 2
+                        },
+                        "hard_way_max": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "hop_easy_pay_to_one": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 15
+                        },
+                        "hop_hard_pay_to_one": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 30
+                        },
+                        "hop_max": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "is_crapless": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "min_buy_lay": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "odds": {
+                            "default": "mirrored345()",
+                            "anyOf": [
+                                {
+                                    "type": "string",
+                                    "pattern": "^flat.*$"
+                                },
+                                {
+                                    "type": "string",
+                                    "pattern": "^mirrored345\\(\\)$"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "4": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "5": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "6": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "8": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "9": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "10": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        }
+                                    },
+                                    "required": [
+                                        "4",
+                                        "5",
+                                        "6",
+                                        "8",
+                                        "9",
+                                        "10"
+                                    ],
+                                    "additionalProperties": false
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "2": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "3": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "4": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "5": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "6": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "8": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "9": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "10": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "11": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        },
+                                        "12": {
+                                            "type": "integer",
+                                            "minimum": 2
+                                        }
+                                    },
+                                    "required": [
+                                        "2",
+                                        "3",
+                                        "4",
+                                        "5",
+                                        "6",
+                                        "8",
+                                        "9",
+                                        "10",
+                                        "11",
+                                        "12"
+                                    ],
+                                    "additionalProperties": false
+                                }
+                            ]
+                        },
+                        "odds_max": {
+                            "anyOf": [
+                                {
+                                    "type": "integer",
+                                    "minimum": 1
+                                },
+                                {
+                                    "type": "null"
+                                }
+                            ],
+                            "default": null
+                        },
+                        "pay_vig_before_buy": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "pay_vig_before_lay": {
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "place_2_12_odds": {
+                            "$ref": "#/$defs/Fraction"
+                        },
+                        "place_3_11_odds": {
+                            "$ref": "#/$defs/Fraction"
+                        }
+                    }
+                },
+                "puck_location": {
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 12
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "existing_bets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                }
+            }
+        },
+        "instructions": {
+            "type": "object",
+            "properties": {
+                "place": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "retrieve": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "set_odds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "remove_odds": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "turn_on": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "turn_off": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
+                "follow_puck": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                }
+            }
+        },
+        "hash": {
+            "description": "SHA-256 Hash",
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+        },
+        "dice": {
+            "$ref": "#/$defs/DiceOutcome"
+        }
+    },
+    "$defs": {
+        "DiceOutcome": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 6
+            }
+        },
+        "Fraction": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+                "type": "integer"
+            }
+        },
+        "BetSignature": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "enum": [
+                        "PassLine",
+                        "Put",
+                        "Come",
+                        "DontPass",
+                        "DontCome",
+                        "Field",
+                        "Place",
+                        "Buy",
+                        "Lay",
+                        "Hardway",
+                        "AnySeven",
+                        "AnyCraps",
+                        "Hop",
+                        "Horn",
+                        "HornHigh",
+                        "World",
+                        "Craps3Way",
+                        "CE"
+                    ]
+                },
+                "wager": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "odds": {
+                    "default": null,
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                },
+                "placement": {
+                    "default": null,
+                    "anyOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 2,
+                            "maximum": 12
+                        },
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "$ref": "#/$defs/DiceOutcome"
+                        }
+                    ]
+                },
+                "override_puck": {
+                    "anyOf": [
+                        {
+                            "enum": [
+                                "ON",
+                                "OFF"
+                            ]
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ]
+                }
+            },
+            "required": [
+                "type",
+                "wager"
+            ]
+        }
+    }
 }

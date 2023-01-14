@@ -17,7 +17,7 @@ class Table:
                  existing_bets: list[BetSignature] = None):
         if config is None:
             config = {}
-        self.config = config if isinstance(config, Config) else Config.from_json(json.dumps(config))
+        self.config = config if isinstance(config, Config) else Config.from_json(config)
         self.puck = Puck(self.config)
         if puck_location is not None:
             self.puck.place(puck_location)

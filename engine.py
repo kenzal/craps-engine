@@ -62,9 +62,9 @@ def process_request(request):
     try:
         jsonschema.validate(instance=request, schema=requestSchema)
     except jsonschema.exceptions.ValidationError as e:
-        return json.dumps({"success": False, "exception": {"type": str(type(e)), "message": str(e)}})
+        return {"success": False, "exception": {"type": str(type(e)), "message": str(e)}}
     try:
         engine = Engine(**request)
         return engine.get_result()
     except Exception as e:
-        return json.dumps({"success": False, "exception": {"type": str(type(e)), "message": str(e)}})
+        return {"success": False, "exception": {"type": str(type(e)), "message": str(e)}}

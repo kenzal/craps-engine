@@ -2,7 +2,15 @@
     "table": {
         "config": {
             "is_crapless": true,
-            "odds": "flat(2)"
+            "odds": "flat(2)",
+            "place_2_12_odds": [
+                11,
+                2
+            ],
+            "place_3_11_odds": [
+                11,
+                4
+            ]
         },
         "puck_location": 4,
         "existing_bets": [
@@ -45,11 +53,10 @@
                 ]
             },
             {
-                "type": "anySeven",
+                "type": "AnySeven",
                 "wager": 1
             }
         ]
     },
-    "instructions": [
-    ]
+    "instructions": {}
 }
