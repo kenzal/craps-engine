@@ -1,0 +1,6 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Craps Request Schema",
+    "description": "This schema is used to make requests of the craps engine.",
+    "type": "object"
+}

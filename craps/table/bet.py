@@ -1,8 +1,11 @@
-import dataclasses
+import json
 
+from JsonEncoder import ComplexEncoder
 from craps.table.puck import Puck
 from craps.dice import Outcome as DiceOutcome
 from enum import Enum
+import dataclasses
+import sys
 import craps.table.config as TableConfig
 import typing
 
@@ -26,8 +29,16 @@ class BetSignature:
     wager: int
     odds: int = None
     placement: typing.Union[None, int, DiceOutcome] = None
-    override_toggle: typing.Union[BetStatus, None] = None
+    override_puck: typing.Union[BetStatus, None] = None
 
+    def for_json(self):
+        return {key: val for key, val in {
+            'type': self.type.__name__,
+            'wager': self.wager,
+            'odds': self.odds,
+            'placement': self.placement,
+            'override_puck': self.override_puck
+        }.items() if val is not None}
 
 class Bet:
     wager: int
@@ -66,19 +77,27 @@ class Bet:
                             wager=self.wager,
                             odds=self.odds,
                             placement=self.location,
-                            override_toggle=self._override_toggle)
+                            override_puck=self._override_toggle)
 
     @classmethod
     def from_signature(cls, signature: BetSignature, puck: Puck, table_config: TableConfig):
+        if isinstance(signature, dict):
+            if isinstance(signature['type'], str):
+                current_module = sys.modules[__name__]
+                lower_dict = {a.lower(): a for a in dir(current_module) if a[0:2] != '__'}
+                signature['type'] = getattr(current_module, lower_dict[signature['type'].lower()])
+            if signature['type'] == Bet or not issubclass(signature['type'], Bet):
+                raise InvalidBet(f"{signature['type'].__name__} is not a valid Bet Class")
+            signature = BetSignature(**signature)
         if cls == Bet:
             return signature.type.from_signature(signature=signature, puck=puck, table_config=table_config)
         bet = cls(wager=signature.wager,
-                   puck=puck,
-                   table_config=table_config,
-                   odds=signature.odds,
-                   location=signature.placement)
-        if signature.override_toggle is not None:
-            bet._override_toggle = signature.override_toggle
+                  puck=puck,
+                  table_config=table_config,
+                  odds=signature.odds,
+                  location=signature.placement)
+        if signature.override_puck is not None:
+            bet._override_toggle = signature.override_puck
         return bet
 
     def _check_valid(self):
@@ -132,6 +151,9 @@ class Bet:
 
     def increase(self, amount: int):
         self.wager += amount
+
+    def for_json(self):
+        return self.get_signature()
 
     def __eq__(self, other):
         return self.__class__ == other.__class__ and dir(self) == dir(other)
@@ -298,7 +320,7 @@ class Lay(Bet):
         return int(self.wager / self._table_config.get_true_odds(self.location) * .05) if self.has_vig else 0
 
 
-class HardWay(Bet):
+class Hardway(Bet):
     can_toggle = True
 
     def _check_valid(self):
@@ -353,6 +375,8 @@ class Hop(Prop):
     single_roll = True
 
     def __init__(self, wager: int, puck: Puck, table_config: TableConfig, outcome: DiceOutcome):
+        if not isinstance(outcome, DiceOutcome):
+            outcome = DiceOutcome(*outcome)
         self.outcome = outcome
         super().__init__(wager=wager, puck=puck, table_config=table_config, odds=None, location=None)
 

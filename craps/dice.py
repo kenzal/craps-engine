@@ -38,3 +38,6 @@ class Outcome:
     @classmethod
     def get_all_unique(cls):
         return [cls(d1, d2) for d1, d2 in list(combinations_with_replacement(range(1, 7), 2))]
+
+    def for_json(self):
+        return [self._d1, self._d2]

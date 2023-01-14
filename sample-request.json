@@ -1,0 +1,55 @@
+{
+    "table": {
+        "config": {
+            "is_crapless": true,
+            "odds": "flat(2)"
+        },
+        "puck_location": 4,
+        "existing_bets": [
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 4
+            },
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 5
+            },
+            {
+                "type": "Place",
+                "wager": 6,
+                "placement": 6
+            },
+            {
+                "type": "Place",
+                "wager": 6,
+                "placement": 8
+            },
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 9
+            },
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 10
+            },
+            {
+                "type": "Hop",
+                "wager": 1,
+                "placement": [
+                    1,
+                    3
+                ]
+            },
+            {
+                "type": "anySeven",
+                "wager": 1
+            }
+        ]
+    },
+    "instructions": [
+    ]
+}

@@ -633,7 +633,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet_easy_outcome.is_hard())
         self.assertTrue(bet_hard_outcome.is_hard())
         other_outcome = self.outcomes[6]
-        bet = table.bet.HardWay(self.wager,
+        bet = table.bet.Hardway(self.wager,
                                 puck=self.puck,
                                 location=bet_hard_outcome.total(),
                                 table_config=self.table_config)
@@ -694,7 +694,7 @@ class TestBet(unittest.TestCase):
             Outcome(5, 5),
         ]:
             with self.subTest(i=outcome.total()):
-                bet = table.bet.HardWay(self.wager,
+                bet = table.bet.Hardway(self.wager,
                                         puck=self.puck,
                                         table_config=self.table_config,
                                         location=outcome.total())
