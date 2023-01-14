@@ -1,8 +1,10 @@
-import craps
-from craps.table import Table
+import copy
 import json
-import jsonschema as jsonschema
 import typing
+
+import jsonschema as jsonschema
+
+from craps.table import Table
 
 
 class Engine:
@@ -14,18 +16,34 @@ class Engine:
         if table is None:
             table = {}
         self.table = table if isinstance(table, Table) else Table(**table)
+        self.orig_table = copy.deepcopy(self.table)
         if instructions is None:
             instructions = []
         self.instructions = instructions
 
     def get_result(self):
         return {
-            'table': {
-                'config': self.table.config,
+            'table':     {
+                'config':        self.orig_table.config,
+                'puck_location': self.orig_table.puck.location(),
+                'existing_bets': self.orig_table.bets,
+            },
+            'hash':      self.hash,
+            'winners':   [],
+            'losers':    [],
+            'new_table': {
+                'config':        self.table.config,
                 'puck_location': self.table.puck.location(),
                 'existing_bets': self.table.bets,
             },
-            'hash': self.hash
+            'summary':   {
+                'dice_outcome':    [1, 1],
+                'total_returned_to_player': 0,
+                'total_winnings_to_player': 0,
+                'value_of_losers': 0,
+                'value_on_table':  sum([bet.wager for bet in self.table.bets]),
+                'value_at_risk':   sum([bet.wager for bet in self.table.bets if bet.is_on()]),
+            }
         }
 
 
