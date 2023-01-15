@@ -34,9 +34,9 @@ class Table:
             existing_bets = [Bet.from_signature(signature=signature,
                                                 table_config=self.config,
                                                 puck=self.puck) for signature in existing_bets]
-        for i, a in enumerate(existing_bets):
-            if any(a.same_type_and_place(b) for b in existing_bets[:i]):
-                raise DuplicateBetException('Duplicate Bets found in existing bets')
+            for i, a in enumerate(existing_bets):
+                if any(a.same_type_and_place(b) for b in existing_bets[:i]):
+                    raise DuplicateBetException('Duplicate Bets found in existing bets')
         self.bets = existing_bets if existing_bets else []
         self.returned_bets = []
 
