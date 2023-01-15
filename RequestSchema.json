@@ -273,6 +273,12 @@
                         "$ref": "#/$defs/BetSignature"
                     }
                 },
+                "update": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/BetSignature"
+                    }
+                },
                 "set_odds": {
                     "type": "array",
                     "items": {

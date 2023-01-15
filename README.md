@@ -89,6 +89,8 @@ properties (`odds`, `placement`, and `override_puck`)
 an array of Bet Signature Object. The bets listed in `place` will be placed on the table (if allowed), while the items
 in `retrieve` will be removed from the table and returned to the player (if allowed).
 
+Bets may have their wager altered with the `update` property. Just list any bets with their new wager in this array.
+
 Odds may be placed on a bet with the `set_odds` property, an array of Bet Signature Objects that include the `odds`
 property.
 

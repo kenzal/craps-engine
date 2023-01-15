@@ -6,7 +6,6 @@ class Odds:
 
     def __init__(self, odds_dict: dict):
         odds_dict = {int(key): val for key, val in odds_dict.items()}
-        print(odds_dict)
         if sorted(list(odds_dict.keys())) != sorted(list(self.valid_keys())):
             raise IndexError('Odds should only be defined for all valid keys')
         for val in odds_dict.values():

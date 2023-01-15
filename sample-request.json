@@ -15,6 +15,17 @@
         "puck_location": 4,
         "existing_bets": [
             {
+                "type": "PassLine",
+                "wager": 5,
+                "placement": 4
+            },
+            {
+                "type": "Come",
+                "wager": 5,
+                "placement": 6,
+                "odds": 10
+            },
+            {
                 "type": "Place",
                 "wager": 5,
                 "placement": 4
@@ -27,7 +38,8 @@
             {
                 "type": "Place",
                 "wager": 6,
-                "placement": 6
+                "placement": 6,
+                "override_puck": "OFF"
             },
             {
                 "type": "Place",
@@ -58,5 +70,56 @@
             }
         ]
     },
-    "instructions": {}
+    "instructions": {
+        "place": [
+            {
+                "type": "Field",
+                "wager": 25
+            }
+        ],
+        "retrieve": [
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 10
+            }
+        ],
+        "update": [
+            {
+                "type": "Place",
+                "wager": 10,
+                "placement": 4
+            }
+        ],
+        "set_odds": [
+            {
+                "type": "PassLine",
+                "wager": 5,
+                "placement": 4,
+                "odds": 10
+            }
+        ],
+        "remove_odds": [
+            {
+                "type": "Come",
+                "wager": 5,
+                "placement": 6,
+                "odds": 10
+            }
+        ],
+        "turn_off": [
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 5
+            }
+        ],
+        "turn_on": [
+            {
+                "type": "Place",
+                "wager": 5,
+                "placement": 8
+            }
+        ]
+    }
 }

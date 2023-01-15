@@ -1,13 +1,11 @@
-import json
-
-from JsonEncoder import ComplexEncoder
-from craps.table.puck import Puck
-from craps.dice import Outcome as DiceOutcome
-from enum import Enum
 import dataclasses
 import sys
-import craps.table.config as TableConfig
 import typing
+from enum import Enum
+
+import craps.table.config as TableConfig
+from craps.dice import Outcome as DiceOutcome
+from craps.table.puck import Puck
 
 
 class BetStatus(Enum):
@@ -30,15 +28,22 @@ class BetSignature:
     odds: int = None
     placement: typing.Union[None, int, DiceOutcome] = None
     override_puck: typing.Union[BetStatus, None] = None
+    payout: int = None
 
     def for_json(self):
         return {key: val for key, val in {
-            'type': self.type.__name__,
-            'wager': self.wager,
-            'odds': self.odds,
-            'placement': self.placement,
-            'override_puck': self.override_puck
+            'type':          self.type.__name__,
+            'wager':         self.wager,
+            'odds':          self.odds,
+            'placement':     self.placement,
+            'override_puck': self.override_puck.value if isinstance(self.override_puck, BetStatus) else self.override_puck
         }.items() if val is not None}
+
+    def same_type_and_place(self, other):
+        if isinstance(other, Bet):
+            return other.get_signature().type == self.type and other.get_signature().placement == self.placement
+        return self.type == other.type and self.placement == other.placement
+
 
 class Bet:
     wager: int
@@ -52,7 +57,6 @@ class Bet:
     single_roll: bool = False
     multi_bet: int = 0
     _override_toggle: typing.Union[BetStatus, None] = None
-    can_take_down = True
 
     def __init__(self, wager: int, puck: Puck, table_config: TableConfig, odds: int = None, location=None):
         if wager <= 0:
@@ -69,6 +73,18 @@ class Bet:
             else:
                 raise InvalidBet('Odds not allowed for {} bet'.format(self.__class__.__name__))
         self._check_valid()
+
+    def can_remove(self) -> bool:
+        return True
+
+    def can_increase(self) -> bool:
+        return True
+
+    def can_decrease(self) -> bool:
+        return True
+
+    def return_vig(self) -> int:
+        return 0
 
     def get_signature(self):
         if self.__class__ == Bet:
@@ -97,7 +113,7 @@ class Bet:
                   odds=signature.odds,
                   location=signature.placement)
         if signature.override_puck is not None:
-            bet._override_toggle = signature.override_puck
+            bet._override_toggle = BetStatus(signature.override_puck)
         return bet
 
     def _check_valid(self):
@@ -156,12 +172,21 @@ class Bet:
         return self.get_signature()
 
     def __eq__(self, other):
+        if isinstance(other, BetSignature):
+            return self.get_signature() == other
         return self.__class__ == other.__class__ and dir(self) == dir(other)
+
+    def same_type_and_place(self, other):
+        if isinstance(other, BetSignature):
+            return self.get_signature().type == other.type and self.get_signature().placement == other.placement
+        return self.__class__ == other.__class__ and self.location == other.location
+
+    def __str__(self):
+        return str(self.get_signature())
 
 
 class PassLine(Bet):
     allow_odds = True
-    can_take_down = False
 
     def move(self, location: int):
         if self.location:
@@ -195,6 +220,12 @@ class PassLine(Bet):
 
     def max_odds(self) -> int:
         return int(self._table_config.odds[self.location] * self.wager)
+
+    def can_remove(self) -> bool:
+        return self.location is None
+
+    def can_decrease(self) -> bool:
+        return self.location is None
 
 
 class Put(PassLine):
@@ -242,6 +273,15 @@ class DontPass(PassLine):
         true_odds = self._table_config.get_true_odds(self.location) if self.location else 0
         odds_payout = int(self.odds / true_odds) if self.odds else 0
         return self.wager + odds_payout
+
+    def can_remove(self) -> bool:
+        return True
+
+    def can_increase(self) -> bool:
+        return self.location is None
+
+    def can_decrease(self) -> bool:
+        return True
 
 
 class DontCome(DontPass):
@@ -293,6 +333,9 @@ class Buy(Place):
             return 0
         return int(self.wager * self._table_config.get_true_odds(outcome.total())) - self.get_vig()
 
+    def return_vig(self) -> int:
+        return self.get_vig() if self._table_config.pay_vig_before_buy else 0
+
 
 class Lay(Bet):
     has_vig = True
@@ -318,6 +361,9 @@ class Lay(Bet):
 
     def get_vig(self) -> int:
         return int(self.wager / self._table_config.get_true_odds(self.location) * .05) if self.has_vig else 0
+
+    def return_vig(self) -> int:
+        return self.get_vig() if self._table_config.pay_vig_before_lay else 0
 
 
 class Hardway(Bet):
@@ -398,6 +444,11 @@ class Hop(Prop):
                    puck=puck,
                    table_config=table_config,
                    outcome=signature.placement)
+
+    def same_type_and_place(self, other):
+        if isinstance(other, BetSignature):
+            return self.get_signature().type == other.type and self.get_signature().placement == other.placement
+        return self.__class__ == other.__class__ and self.outcome == other.outcome
 
 
 class Horn(Prop):

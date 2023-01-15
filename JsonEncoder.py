@@ -8,4 +8,4 @@ class ComplexEncoder(json.JSONEncoder):
             return o.for_json()
         if 'as_json' in dir(o) and callable(getattr(o, 'as_json')):
             return json.loads(o.as_json())
-        return o.__dict__
+        return o.__dir__
