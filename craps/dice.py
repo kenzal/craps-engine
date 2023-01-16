@@ -11,10 +11,10 @@ class Outcome:
     def is_hard(self):
         return self._d1 == self._d2
 
-    def __init__(self, d1: int, d2: int):
-        if d1 not in range(1, 7) or d2 not in range(1, 7):
+    def __init__(self, first_die: int, second_die: int):
+        if first_die not in range(1, 7) or second_die not in range(1, 7):
             raise ValueError("Dice value must be between 1 and 6")
-        self._d1, self._d2 = sorted([d1, d2])
+        self._d1, self._d2 = sorted([first_die, second_die])
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -26,10 +26,10 @@ class Outcome:
         return hash(sorted([self._d1, self._d2]))
 
     def __str__(self):
-        return "({}, {})".format(*sorted([self._d1, self._d2]))
+        return f"({', '.join(sorted([str(self._d1), str(self._d2)]))})"
 
     def __repr__(self):
-        return "{}({}, {})".format(self.__class__.__name__, *sorted([self._d1, self._d2]))
+        return f"{self.__class__.__name__}{str(self)}"
 
     @classmethod
     def get_all(cls):

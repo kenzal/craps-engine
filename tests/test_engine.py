@@ -2,11 +2,30 @@ import json
 import unittest
 
 from JsonEncoder import ComplexEncoder
-from engine import Engine
+from craps.table import Bet, Come, Config, Puck
+from engine import Engine, get_bet_from_list
 from craps.dice import Outcome as DiceOutcome
 
 
 class TestEngine(unittest.TestCase):
+
+    def test_get_bet_from_empty_list(self):
+        self.assertIsNone(get_bet_from_list(bet_list=[], bet_type='Come', bet_placement=None))
+
+    def test_get_bet_from_list_of_similar(self):
+        config = Config
+        puck = Puck(table_config=config)
+        bet_list = [
+            Bet.from_signature({"type": "Come", "wager": 10, "placement": 4}, puck=puck),
+            Bet.from_signature({"type": "Come", "wager": 10, "placement": None}, puck=puck),
+        ]
+        self.assertIsInstance(bet_list[0], Come)
+        self.assertIsInstance(bet_list[1], Come)
+        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type='Come', bet_placement=4), Come)
+        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type='Come', bet_placement=None), Come)
+        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=Come, bet_placement=4), Come)
+        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=Come, bet_placement=None), Come)
+
     def test_pass_line_set(self):
         req = {"instructions": {"place": [{"type": "PassLine", "wager": 10}]}, "dice": [1, 3]}
         eng = Engine(**req)
@@ -49,8 +68,9 @@ class TestEngine(unittest.TestCase):
         result = eng.get_result()
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
-        self.assertIsNone(result['new_table']['existing_bets'][1].location)
+        self.assertEqual(len(result['new_table']['existing_bets']), 2)
+        self.assertIsNotNone(get_bet_from_list(bet_list=result['new_table']['existing_bets'], bet_type='Come', bet_placement=4))
+        self.assertIsNotNone(get_bet_from_list(bet_list=result['new_table']['existing_bets'], bet_type='Come', bet_placement=None))
 
     def test_come_down_and_up_different_wagers(self):
         req = {"table":        {"existing_bets": [{"type": "Come", "wager": 5, "placement": 4}], "puck_location": 6},

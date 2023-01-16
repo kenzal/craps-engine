@@ -32,13 +32,15 @@ class Table:
             self.puck.place(puck_location)
         if existing_bets:
             existing_bets = [Bet.from_signature(signature=signature,
-                                                table_config=self.config,
                                                 puck=self.puck) for signature in existing_bets]
-            for i, a in enumerate(existing_bets):
-                if any(a.same_type_and_place(b) for b in existing_bets[:i]):
+            for i, bet_a in enumerate(existing_bets):
+                if any(bet_a.same_type_and_place(bet_b) for bet_b in existing_bets[:i]):
                     raise DuplicateBetException('Duplicate Bets found in existing bets')
         self.bets = existing_bets if existing_bets else []
         self.returned_bets = []
+
+    def get_valid_points(self):
+        return self.config.get_valid_points()
 
     def get_bet_signatures(self):
         return [bet.get_signature() for bet in self.bets]
@@ -50,128 +52,106 @@ class Table:
             'puck_location': self.puck.location(),
         })
 
+    def _process_place(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            if bet.odds is not None:
+                raise InvalidBet("Cannot place bet with odds")
+            if bet.get_signature().type in (PassLine, DontPass):
+                if any(existing.get_signature().type == PassLine for existing in self.bets):
+                    raise DuplicateBetException(
+                        f"Cannot place additional {bet.__class__.__name__} bet")
+                if bet.location is not None:
+                    raise InvalidBet(f"Cannot place {bet.__class__.__name__} bet with point")
+                if self.puck.is_on():
+                    raise InvalidBet(
+                        f"Cannon place {bet.__class__.__name__} bet while point is established")
+            if bet.get_signature().type in (Come, DontCome):
+                if bet.location is not None:
+                    raise InvalidBet(f"Cannot place {bet.__class__.__name__} bet with point")
+                if self.puck.is_off():
+                    raise InvalidBet(
+                        f"Cannon place {bet.__class__.__name__} bet unless point is established")
+            if any(bet.same_type_and_place(existing) for existing in self.bets):
+                raise DuplicateBetException(f"Cannot place additional {bet}")
+            self.bets.append(bet)
+
+    def _process_retrieve(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            if not bet.can_remove():
+                raise ContractBetException(f"Cannot retrieve contract bet {bet}")
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    self.returned_bets.append(existing_bet)
+            self.bets = [existing_bet for existing_bet in
+                         self.bets if not bet.same_type_and_place(existing_bet)]
+
+    def _process_update(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    if bet.wager > existing_bet.wager and not existing_bet.can_increase():
+                        raise ContractBetException(
+                            f"Cannot increase wager on contract bet {existing_bet}")
+                    if bet.wager < existing_bet.wager and not existing_bet.can_decrease():
+                        raise ContractBetException(
+                            f"Cannot decrease wager on contract bet {existing_bet}")
+                    existing_bet.wager = bet.wager
+
+    def _process_set_odds(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    existing_bet.set_odds(bet.odds)
+
+    def _process_remove_odds(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    existing_bet.remove_odds()
+
+    def _process_turn_on(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    existing_bet.turn_on()
+
+    def _process_turn_off(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    existing_bet.turn_off()
+
+    def _process_follow_puck(self, bets: list[BetSignature] = None):
+        bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        for bet in bets:
+            for existing_bet in self.bets:
+                if bet.same_type_and_place(existing_bet):
+                    existing_bet.follow_puck()
+
     def process_instructions(self, instructions):
-        def process_place(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                if bet.odds is not None:
-                    raise InvalidBet("Cannot place bet with odds")
-                if type(bet) == PassLine:
-                    if any(type(existing) == PassLine for existing in self.bets):
-                        raise DuplicateBetException("Cannot place additional PassLine bet")
-                    if bet.location is not None:
-                        raise InvalidBet("Cannot place PassLine bet with point")
-                    if self.puck.is_on():
-                        raise InvalidBet("Cannon place PassLine bet while point is established")
-                if type(bet) == Come:
-                    if bet.location is not None:
-                        raise InvalidBet("Cannot place Come bet with point")
-                    if self.puck.is_off():
-                        raise InvalidBet("Cannon place Come bet unless point is established")
-                if type(bet) == DontPass:
-                    if any(type(existing) == PassLine for existing in self.bets):
-                        raise DuplicateBetException("Cannot place additional DontPass bet")
-                    if bet.location is not None:
-                        raise InvalidBet("Cannot place DontPass bet with point")
-                    if self.puck.is_on():
-                        raise InvalidBet("Cannon place DontPass bet while point is established")
-                if type(bet) == DontCome:
-                    if bet.location is not None:
-                        raise InvalidBet("Cannot place DontCome bet with point")
-                    if self.puck.is_off():
-                        raise InvalidBet("Cannon place DontCome bet unless point is established")
-                if any(bet.same_type_and_place(existing) for existing in self.bets):
-                    raise DuplicateBetException(f"Cannot place additional {bet}")
-                self.bets.append(bet)
-
-        def process_retrieve(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                if not bet.can_remove():
-                    raise ContractBetException(f"Cannot retrieve contract bet {bet}")
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        self.returned_bets.append(existing_bet)
-                self.bets = [existing_bet for existing_bet in self.bets if not bet.same_type_and_place(existing_bet)]
-
-        def process_update(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        if bet.wager > existing_bet.wager and not existing_bet.can_increase():
-                            raise ContractBetException(f"Cannot increase wager on contract bet {existing_bet}")
-                        if bet.wager < existing_bet.wager and not existing_bet.can_decrease():
-                            raise ContractBetException(f"Cannot decrease wager on contract bet {existing_bet}")
-                        existing_bet.wager = bet.wager
-
-        def process_set_odds(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        existing_bet.set_odds(bet.odds)
-
-        def process_remove_odds(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        existing_bet.remove_odds()
-
-        def process_turn_on(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        existing_bet.turn_on()
-
-        def process_turn_off(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        existing_bet.turn_off()
-
-        def process_follow_puck(bets: list[BetSignature] = None):
-            bets = [Bet.from_signature(signature=signature,
-                                       table_config=self.config,
-                                       puck=self.puck) for signature in bets]
-            for bet in bets:
-                for existing_bet in self.bets:
-                    if bet.same_type_and_place(existing_bet):
-                        existing_bet.follow_puck()
-
         if 'retrieve' in instructions:
-            process_retrieve(instructions['retrieve'])
+            self._process_retrieve(instructions['retrieve'])
         if 'place' in instructions:
-            process_place(instructions['place'])
+            self._process_place(instructions['place'])
         if 'update' in instructions:
-            process_update(instructions['update'])
+            self._process_update(instructions['update'])
         if 'set_odds' in instructions:
-            process_set_odds(instructions['set_odds'])
+            self._process_set_odds(instructions['set_odds'])
         if 'remove_odds' in instructions:
-            process_remove_odds(instructions['remove_odds'])
+            self._process_remove_odds(instructions['remove_odds'])
         if 'turn_on' in instructions:
-            process_turn_on(instructions['turn_on'])
+            self._process_turn_on(instructions['turn_on'])
         if 'turn_off' in instructions:
-            process_turn_off(instructions['turn_off'])
+            self._process_turn_off(instructions['turn_off'])
         if 'follow_puck' in instructions:
-            process_follow_puck(instructions['follow_puck'])
+            self._process_follow_puck(instructions['follow_puck'])
 
     @classmethod
     def from_json_obj(cls,
@@ -179,4 +159,7 @@ class Table:
                       existing_bets: list[BetSignature] = None,
                       puck_location: int = None):
         table = cls(config=config_object, existing_bets=existing_bets)
-        table.puck._location = puck_location
+        if puck_location:
+            table.puck.place(puck_location)
+        else:
+            table.puck.remove()

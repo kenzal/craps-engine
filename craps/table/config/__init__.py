@@ -1,9 +1,11 @@
-from dataclasses import dataclass
-from .odds import Odds, StandardOdds, CraplessOdds
-from craps.dice import Outcome as DiceOutcome
 import fractions
 import json
+import re
+from dataclasses import dataclass
+
 import JsonEncoder
+from craps.dice import Outcome as DiceOutcome
+from .odds import Odds, StandardOdds, CraplessOdds
 
 
 class InconsistentConfig(Exception):
@@ -12,6 +14,8 @@ class InconsistentConfig(Exception):
 
 @dataclass(frozen=True)
 class Config:
+    # pylint: disable=too-many-instance-attributes
+    # Configuration classes always have too many attributes, but they are necessary
     allow_buy_59: bool = False
     allow_put: bool = False
     bet_max: int = None
@@ -32,6 +36,9 @@ class Config:
     place_2_12_odds: fractions.Fraction = fractions.Fraction(11, 2)
     place_3_11_odds: fractions.Fraction = fractions.Fraction(11, 4)
 
+    def get_valid_points(self):
+        return self.odds.valid_keys()
+
     @classmethod
     def from_json(cls, primitive):
         if isinstance(primitive, str):
@@ -44,10 +51,17 @@ class Config:
             is_crapless = primitive['is_crapless'] if 'is_crapless' in primitive else False
             odds_cls = CraplessOdds if is_crapless else StandardOdds
             if isinstance(primitive['odds'], str):
-                primitive['odds'] = eval('{}.{}'.format(odds_cls.__name__, primitive['odds']))
+                result = re.search(r"^(?P<method>\w+)\((?P<args>.*)\)$", primitive['odds'])
+                if not result:
+                    raise InconsistentConfig('Unknown Odds Format')
+                if result.group('method') in dir(odds_cls) and \
+                        callable(getattr(odds_cls, result.group('method'))):
+                    function = getattr(odds_cls, result.group('method'))
+                    primitive['odds'] = function(result.group('args'))
+                else:
+                    raise InconsistentConfig('Unknown Odds Method')
             else:
-                primitive['odds'] = {int(key): value for key, value in primitive['odds'].items()}
-                primitive['odds'] = eval('{}({})'.format(odds_cls.__name__, primitive['odds']))
+                primitive['odds'] = odds_cls(dict(primitive['odds'].items()))
         return cls(**primitive)
 
     def as_json(self):
@@ -100,13 +114,12 @@ class Config:
             'odds_max',
         ]:
             if getattr(self, key) and getattr(self, key) < 0:
-                raise InconsistentConfig('{} Must Be Positive'.format(key))
+                raise InconsistentConfig(f'{key} Must Be Positive')
 
     def __repr__(self):
-        return "{0}({1})".format(self.__class__.__name__,
-                                 ', '.join(['{}={}'.format(key, repr(val)) for key, val in
-                                            self._diff_from_default().items()])
-                                 )
+        param_string = ', '.join([f'{key}={repr(val)}' for
+                                  key, val in self._diff_from_default().items()])
+        return f"{self.__class__.__name__}({param_string})"
 
     def _diff_from_default(self):
         return {attr: getattr(self, attr) for attr in self.__dict__ if

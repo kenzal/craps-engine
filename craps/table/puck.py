@@ -1,6 +1,7 @@
-from craps.table.config import Config
 import json
 import typing
+
+from craps.table.config import Config
 
 
 class IllegalMove(Exception):
@@ -22,7 +23,7 @@ class Puck:
     def place(self, location: int) -> typing.NoReturn:
         if self.is_on():
             raise IllegalMove("Puck already placed")
-        if location not in self.table_config.odds.valid_keys():
+        if location not in self.table_config.get_valid_points():
             raise IllegalMove("Invalid puck location")
         self._location = location
 
@@ -40,4 +41,3 @@ class Puck:
     def set_from_json(self, json_str):
         self._location = json.loads(json_str)
         return self
-
