@@ -52,7 +52,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(table.bet.InvalidBet):  # Can not move twice
+        with self.assertRaises(table.bet.BadBetAction):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -114,7 +114,7 @@ class TestBet(unittest.TestCase):
         self.assertEqual(bet.wager, self.wager)
         self.assertIsNone(bet.odds)
 
-        with self.assertRaises(table.bet.InvalidBet):  # Can not move twice
+        with self.assertRaises(table.bet.BadBetAction):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -191,7 +191,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(table.bet.InvalidBet):  # Can not move twice
+        with self.assertRaises(table.bet.BadBetAction):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -262,7 +262,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(table.bet.InvalidBet):  # Can not move twice
+        with self.assertRaises(table.bet.BadBetAction):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertTrue(bet.is_winner(self.outcomes[7]), 'Wins on Seven')
@@ -320,7 +320,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(table.bet.InvalidBet):  # Can not move twice
+        with self.assertRaises(table.bet.BadBetAction):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertTrue(bet.is_winner(self.outcomes[7]), 'Wins on Seven')
