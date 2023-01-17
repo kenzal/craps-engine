@@ -76,10 +76,6 @@ class TestOdds(unittest.TestCase):
                 with self.assertRaises(KeyError):
                     odds.__getitem__(13)
 
-    def test_as_json(self):
-        self.assertEqual(json.loads(ConfigOdds.StandardOdds.mirrored345().as_json()), json.loads('"mirrored345()"'))
-        self.assertEqual(json.loads(ConfigOdds.StandardOdds.flat(5).as_json()), json.loads('"flat(5)"'))
-
 
 if __name__ == '__main__':
     unittest.main()

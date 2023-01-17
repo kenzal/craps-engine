@@ -5,6 +5,7 @@ This module functions as the engine for the craps microservice
 """
 import copy
 import json
+import os
 import secrets
 import textwrap
 import typing
@@ -19,7 +20,20 @@ from craps.table.bet import Bet, PassLine, Come
 
 def get_bet_from_list(bet_list: list[Bet],
                       bet_type: typing.Union[type, str],
-                      bet_placement: typing.Union[int, None, DiceOutcome]):
+                      bet_placement: typing.Union[int, None, DiceOutcome]) \
+        -> typing.Union[None, Bet, list[Bet]]:
+    """
+    Return matching bet(s) from list
+
+    :param bet_list: List of bets to be filtered
+    :type bet_list: list[Bet]
+    :param bet_type: Type of bet to filter for
+    :type bet_type: type|str
+    :param bet_placement:
+    :type bet_placement: None|int|craps.dice.Outcome
+    :return: Any Found Bets
+    :rtype: None|Bet|list[Bet]
+    """
     found = [existing for existing in bet_list if
              existing.get_signature().type.__name__ == (bet_type.__name__ if
                                                         isinstance(bet_type, type) else
@@ -33,9 +47,26 @@ def get_bet_from_list(bet_list: list[Bet],
 
 
 class Engine:
-    hash: str = None
-    dice_roll: DiceOutcome = None
-    table: Table = None
+    """
+    Craps Engine
+
+    Functions as the "Dealers" for the craps. Handles the change of state from one to the next.
+
+    Attributes
+    ----------
+    hash : None|str
+        The hash used to generate the dice roll
+    dice_roll : None|DiceOutcome
+        The dice outcome once made or specified
+    table : Table
+        The craps table
+    instructions : dict
+        Set of instructions for the engine to manipulate bets *before* the roll
+    """
+    hash: str = None  #: The hash used to generate the dice roll
+    dice_roll: DiceOutcome = None  #: The dice outcome once made or specified
+    table: Table = None  #: The craps table
+    #: Set of instructions for the engine to manipulate bets *before* the roll
     instructions: dict = None
 
     def __init__(self,
@@ -43,6 +74,18 @@ class Engine:
                  instructions=None,
                  hash: typing.Union[str, None] = None,
                  dice: typing.Union[DiceOutcome, list, None] = None):
+        """
+        Initialize a new engine
+
+        :param table: Craps Table
+        :type table: Table|dict
+        :param instructions: Instruction Set For Dealers to process before the dice roll
+        :type instructions: dict
+        :param hash: SHA-256 hash string used initialize the dice roller
+        :type hash: str
+        :param dice: Optional specification for dice roll (used if provided)
+        :type dice: Outcome|list|None
+        """
         # pylint: disable=redefined-builtin
         # `hash` is appropriate here
         self.hash = hash
@@ -56,6 +99,11 @@ class Engine:
         self.instructions = instructions
 
     def get_result(self):
+        """
+        Return the result object containing a summary and the next table state
+
+        :return: dict
+        """
         winners = [bet for bet in self.table.bets if bet.is_on() and bet.is_winner(self.dice_roll)]
         losers = [bet for bet in self.table.bets if bet.is_on() and bet.is_loser(self.dice_roll)]
         bets_after_roll = [copy.copy(bet) for bet in self.table.bets if bet not in losers]
@@ -70,7 +118,7 @@ class Engine:
 
         dice_total = self.dice_roll.total()
 
-        bets_after_roll = self._get_new_bets(bets_after_roll, dice_total)
+        bets_after_roll = self._get_new_bets(bets_after_roll)
         if self.table.puck.is_off() and dice_total in self.table.get_valid_points():
             new_puck_location = dice_total
         elif self.table.puck.is_on() and dice_total in [7, self.table.puck.location()]:
@@ -106,9 +154,16 @@ class Engine:
             }
         }
 
-    def _get_new_bets(self, bets_after_roll, dice_total):
+    def _get_new_bets(self, bets_after_roll):
+        """
+        Get the bet-list for the new table state
+
+        :param bets_after_roll: List of bets *after* the roll of the current state (losers removed)
+        :return: list[Bet] of bets for the next table state (traveling bets moved or removed)
+        """
         # pylint: disable=too-many-branches
-        # Logic Tree is as simple as I can get it
+        # Logic Tree is as simple as I can get it,
+        dice_total = self.dice_roll.total()
         new_bets_after_roll = []
         for bet in bets_after_roll:
             if not isinstance(bet, PassLine):
@@ -145,9 +200,11 @@ class Engine:
         return new_bets_after_roll
 
     def process_instructions(self):
+        """Process the instructions list."""
         self.table.process_instructions(self.instructions)
 
     def roll_dice(self):
+        """Sets dice_roll to a new value if not set."""
         if self.dice_roll:
             return
         self.hash = (self.hash if self.hash else secrets.token_hex(32)).lower()
@@ -164,14 +221,23 @@ class Engine:
             self.dice_roll = DiceOutcome(red_die, blue_die)
 
 
-with open('RequestSchema.json', encoding='utf-8') as f:
+__location__ = os.path.realpath(
+    os.path.join(os.getcwd(), os.path.dirname(__file__)))
+
+with open(os.path.join(__location__, 'RequestSchema.json'), encoding='utf-8') as f:
     requestSchema = json.load(f)
 
-with open('sample-request.json', encoding='utf-8') as f:
+with open(os.path.join(__location__, 'sample-request.json'), encoding='utf-8') as f:
     req = json.load(f)
 
 
 def process_request(request):
+    """
+    Validate and process a request object
+
+    :param request: request object
+    :return: response object
+    """
     try:
         jsonschema.validate(instance=request, schema=requestSchema)
     except jsonschema.exceptions.ValidationError as error:

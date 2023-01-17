@@ -39,11 +39,6 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(craps.table.puck.IllegalMove):
             puck.place(0)
 
-    def test_json(self):
-        puck = craps.table.puck.Puck(TableConfig.Config())
-        self.assertEqual(puck.location(), craps.table.puck.Puck(TableConfig.Config()).set_from_json(puck.as_json()).location())
-        puck.place(4)
-        self.assertEqual(puck, puck.set_from_json(puck.as_json()))
 
 
 if __name__ == '__main__':

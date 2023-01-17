@@ -1,3 +1,6 @@
+"""
+Module: Craps.Table.Config
+"""
 import fractions
 import json
 import re
@@ -9,38 +12,58 @@ from .odds import Odds, StandardOdds, CraplessOdds
 
 
 class InconsistentConfig(Exception):
-    pass
+    """Inconsistent Configuration"""
 
 
 @dataclass(frozen=True)
 class Config:
+    """
+    Craps Table Configuration
+    """
+
     # pylint: disable=too-many-instance-attributes
     # Configuration classes always have too many attributes, but they are necessary
-    allow_buy_59: bool = False
-    allow_put: bool = False
-    bet_max: int = None
-    bet_min: int = 5
-    dont_bar: int = 12
-    field_12_pay: int = 3
-    field_2_pay: int = 2
-    hard_way_max: int = None
-    hop_easy_pay_to_one: int = 15
-    hop_hard_pay_to_one: int = 30
-    hop_max: int = None
-    is_crapless: bool = False
-    min_buy_lay: int = None
-    odds: Odds = StandardOdds.mirrored345()
-    odds_max: int = None
-    pay_vig_before_buy: bool = False
-    pay_vig_before_lay: bool = False
+    allow_buy_59: bool = False  #: Allow a Buy Bet on 5 and 9
+    allow_put: bool = False  #: Allow Put Bets
+    bet_max: int = None  #: Bet Maximum
+    bet_min: int = 5  #: Bet Minimum
+    dont_bar: int = 12  #: Don't Pass and Don't Come Bar Craps
+    field_12_pay: int = 3  #: Multiplier for a 12 in the field
+    field_2_pay: int = 2  #: Multiplier for a 2 in the field
+    hard_way_max: int = None  #: Maximum bet on hard way Bets
+    hop_easy_pay_to_one: int = 15  #: Payout Multiplier for easy hops (including 3, 11)
+    hop_hard_pay_to_one: int = 30  #: Payout Multiplier for hard hops (including 2, 12)
+    hop_max: int = None  #: Maximum wager for hop bet
+    is_crapless: bool = False  #: Flag for if the table is crapless craps
+    min_buy_lay: int = None  #: Minimum wager for Buy and Lay bets
+    odds: Odds = StandardOdds.mirrored345()  #: Maximum Odds for Place/Come/Dont Bets
+    odds_max: int = None  #: Maximum Wager on Odds
+    pay_vig_before_buy: bool = False  #: Vig required on placing Buy Bet
+    pay_vig_before_lay: bool = False  #: Vig required on placing Lay Bet
+    #: Place Bet odds for 2 and 12 in Crapless Craps
     place_2_12_odds: fractions.Fraction = fractions.Fraction(11, 2)
+    #: Place Bet odds for 3 and 11 in Crapless Craps
     place_3_11_odds: fractions.Fraction = fractions.Fraction(11, 4)
 
     def get_valid_points(self):
+        """
+        List of valid points for the current table
+
+        :return: List of valid points
+        :rtype: list[int]
+        :raise InconsistentConfig: On bad/inconsistent configuration
+        """
         return self.odds.valid_keys()
 
     @classmethod
     def from_json(cls, primitive):
+        """
+        Build Configuration from a JSON string (or the resulting Dictionary)
+
+        :param primitive: decoded or encoded JSON string
+        :type primitive: str|dict
+        :return: Config
+        """
         if isinstance(primitive, str):
             primitive = json.loads(primitive)
         if 'place_2_12_odds' in primitive:
@@ -64,11 +87,23 @@ class Config:
                 primitive['odds'] = odds_cls(dict(primitive['odds'].items()))
         return cls(**primitive)
 
-    def as_json(self):
-        diff = self._diff_from_default()
-        return json.dumps(diff, cls=JsonEncoder.ComplexEncoder)
+    def for_json(self):
+        """
+        Dictionary of Config without Defaults listed
+
+        :return: dict
+        """
+        return self._diff_from_default()
 
     def get_place_odds(self, place: int) -> fractions.Fraction:
+        """
+        Odds for a particular place bet
+
+        :param place: location as integer
+        :type place: int
+        :return: Odds for place bet
+        :rtype: fractions.Fraction
+        """
         if place in [6, 8]:
             return fractions.Fraction(7, 6)
         if place in [5, 9]:
@@ -83,6 +118,15 @@ class Config:
 
     @staticmethod
     def get_true_odds(place: int) -> fractions.Fraction:
+        """
+        True odds for a particular place
+
+        Used in calculating Odds payouts for Pass/Come/Dont Bets
+
+        :param place: location as int
+        :return: true odds
+        :rtype: fractions.Fraction
+        """
         ways_to_win = len([out for out in DiceOutcome.get_all() if out.total() == place])
         ways_to_lose = len([out for out in DiceOutcome.get_all() if out.total() == 7])
         return fractions.Fraction(ways_to_lose, ways_to_win)

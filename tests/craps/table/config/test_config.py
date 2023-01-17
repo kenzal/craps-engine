@@ -54,20 +54,6 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(TableConfig.InconsistentConfig):
             TableConfig.Config(bet_max=12)
 
-    def test_as_json(self):
-        self.assertEqual(json.loads(TableConfig.Config().as_json()), json.loads('{}'))
-        self.assertEqual(json.loads(TableConfig.Config(odds_max=5000).as_json()), json.loads('{"odds_max":5000}'))
-        self.assertEqual(json.loads(TableConfig.Config(odds=ConfigOdds.StandardOdds.flat(10)).as_json()), json.loads('{"odds":"flat(10)"}'))
-
-        for i, o in enumerate([
-            TableConfig.Config(odds_max=5000),
-            TableConfig.Config(odds=ConfigOdds.StandardOdds.flat(10)),
-            TableConfig.Config(is_crapless=True, odds=ConfigOdds.CraplessOdds.flat(5)),
-            TableConfig.Config(odds=ConfigOdds.StandardOdds({4: 3, 5: 4, 6: 5, 8: 5, 9: 4, 10: 6})),
-        ]):
-            with self.subTest(i=i):
-                self.assertEqual(o, TableConfig.Config.from_json(o.as_json()))
-
 
 if __name__ == '__main__':
     unittest.main()

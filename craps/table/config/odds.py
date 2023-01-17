@@ -1,7 +1,12 @@
-import json
+"""
+Module: Craps.Table.Config.Odds
+"""
 
 
 class Odds:
+    """
+    Abstract Odds base class
+    """
     _dict = {}
 
     def __init__(self, odds_dict: dict):
@@ -12,14 +17,27 @@ class Odds:
 
     @classmethod
     def valid_keys(cls):
-        return []
+        """
+        A list of valid keys (points) for the concrete class.
 
-    class UnknownOdds(IndexError):
-        pass
+        :return: List of points
+        :rtype: list[int]
+        """
+        return []
 
     @classmethod
     def flat(cls, odds_multiplier: int):
-        pass
+        """
+        Odds are the same regardless of point
+
+        :param odds_multiplier: maximum odds for every point
+        :type odds_multiplier: int
+        :return: Newly Configured Odds Object
+        :rtype: Odds
+        """
+
+    class UnknownOdds(IndexError):
+        """Unknown Odds Error"""
 
     def __getitem__(self, key: int):
         return self._dict[key]
@@ -44,30 +62,59 @@ class Odds:
 
 
 class StandardOdds(Odds):
+    """
+    Standard Craps Game Odds Configuration
+    """
 
     @classmethod
     def valid_keys(cls):
+        """
+        A list of valid keys (points) for the concrete class.
+
+        :return: List of points
+        :rtype: list[int]
+        """
         return [4, 5, 6, 8, 9, 10]
 
     @classmethod
     def mirrored345(cls):
+        """
+        Traditional 3x4x5x odds
+
+        :return: Newly Configured Odds Object
+        :rtype: StandardOdds
+        """
         return cls({4: 3, 5: 4, 6: 5, 8: 5, 9: 4, 10: 3})
 
     @classmethod
     def flat(cls, odds_multiplier: int):
-        return cls({4: odds_multiplier,
-                    5: odds_multiplier,
-                    6: odds_multiplier,
-                    8: odds_multiplier,
-                    9: odds_multiplier,
+        """
+        Odds are the same regardless of point
+
+        :param odds_multiplier: maximum odds for every point
+        :type odds_multiplier: int
+        :return: Newly Configured Odds Object
+        :rtype: StandardOdds
+        """
+        return cls({4:  odds_multiplier,
+                    5:  odds_multiplier,
+                    6:  odds_multiplier,
+                    8:  odds_multiplier,
+                    9:  odds_multiplier,
                     10: odds_multiplier})
 
-    def as_json(self):
+    def for_json(self):
+        """
+        Odds represented as simple structures
+
+        :return: Constructor Method or Dictionary of Odds
+        :rtype: string|dict
+        """
         if self == self.mirrored345():
-            return json.dumps("mirrored345()")
+            return "mirrored345()"
         if self == self.flat(self[6]):
-            return json.dumps(f'flat({self[6]})')
-        return json.dumps(self._dict)
+            return f"flat({self[6]})"
+        return self._dict
 
     def __repr__(self):
         if self == self.mirrored345():
@@ -78,19 +125,42 @@ class StandardOdds(Odds):
 
 
 class CraplessOdds(Odds):
+    """
+    Crapless Craps Game Odds Configuration
+    """
 
     @classmethod
     def valid_keys(cls):
+        """
+        A list of valid keys (points) for the concrete class.
+
+        :return: List of points
+        :rtype: list[int]
+        """
         return [2, 3, 4, 5, 6, 8, 9, 10, 11, 12]
 
     @classmethod
     def flat(cls, odds_multiplier: int):
+        """
+        Odds are the same regardless of point
+
+        :param odds_multiplier: maximum odds for every point
+        :type odds_multiplier: int
+        :return: Newly Configured Odds Object
+        :rtype: CraplessOdds
+        """
         return cls({key: odds_multiplier for key in range(2, 13) if key != 7})
 
-    def as_json(self):
+    def for_json(self):
+        """
+        Odds represented as simple structures
+
+        :return: Constructor Method or Dictionary of Odds
+        :rtype: string|dict
+        """
         if self == self.flat(self[6]):
-            return json.dumps(f'flat({self[6]})')
-        return json.dumps(self._dict)
+            return f"flat({self[6]})"
+        return self._dict
 
     def __repr__(self):
         if self == self.flat(self[6]):

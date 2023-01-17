@@ -1,4 +1,6 @@
-import json
+"""
+Module: Craps.Table
+"""
 import typing
 
 from craps.table.bet import Bet, BetSignature, PassLine, InvalidBet, Come, DontPass, DontCome
@@ -7,23 +9,39 @@ from craps.table.puck import Puck
 
 
 class DuplicateBetException(Exception):
-    pass
+    """Duplicate Bet Exception"""
 
 
 class ContractBetException(Exception):
-    pass
+    """Contract Bet Exception"""
 
 
 class Table:
-    config: Config
-    puck: Puck
-    bets: list[Bet]
-    returned_bets: list[Bet]
+    """
+    Craps Table Class
+
+    Holds all information about a given table, including the table configuration,
+    the puck information, and all existing bets on the table (on or off).
+    """
+    config: Config  #: Table Configuration (rules)
+    puck: Puck  #: The Point Puck on the table
+    bets: list[Bet]  #: List of all bets on the table
+    returned_bets: list[Bet]  #: List of all bets returned to the player
 
     def __init__(self,
                  config: Config = None,
                  puck_location: typing.Union[int, None] = None,
                  existing_bets: list[BetSignature] = None):
+        """
+        Constructor
+
+        :param config: Optional Table Configuration (rules)
+        :type config: Config
+        :param puck_location: Optional Location of the Point Puck
+        :type puck_location: None|int
+        :param existing_bets: Optional List of Existing Bets
+        :type existing_bets: list[BetSignature]
+        """
         if config is None:
             config = {}
         self.config = config if isinstance(config, Config) else Config.from_json(config)
@@ -40,17 +58,35 @@ class Table:
         self.returned_bets = []
 
     def get_valid_points(self):
+        """
+        List of valid points for the current table
+
+        :return: Valid Points for Table
+        :rtype: list[int]
+        """
         return self.config.get_valid_points()
 
     def get_bet_signatures(self):
+        """
+        List of all bets as signatures
+
+        :return: All Bet Signatures
+        :rtype: list[BetSignature]
+        """
         return [bet.get_signature() for bet in self.bets]
 
-    def as_json(self):
-        return json.dumps({
+    def for_json(self):
+        """
+        Table object as primitive types for json encoding
+
+        :return: dict representing table definition
+        :rtype: dict
+        """
+        return {
             'config_object': self.config,
             'existing_bets': self.get_bet_signatures(),
             'puck_location': self.puck.location(),
-        })
+        }
 
     def _process_place(self, bets: list[BetSignature] = None):
         bets = [Bet.from_signature(signature=signature, puck=self.puck) for signature in bets]
@@ -136,6 +172,12 @@ class Table:
                     existing_bet.follow_puck()
 
     def process_instructions(self, instructions):
+        """
+        Process the dictionary of instruction lists
+
+        :param instructions: Dictionary of instruction lists
+        :type instructions: dict
+        """
         if 'retrieve' in instructions:
             self._process_retrieve(instructions['retrieve'])
         if 'place' in instructions:
@@ -158,6 +200,18 @@ class Table:
                       config_object: Config,
                       existing_bets: list[BetSignature] = None,
                       puck_location: int = None):
+        """
+        Build table from decoded JSON string
+
+        :param config_object:
+        :type config_object: dict|None
+        :param existing_bets:
+        :type existing_bets: list[BetSignature]
+        :param puck_location:
+        :type puck_location: None|int
+        :return: New Table Object
+        :rtype: Table
+        """
         table = cls(config=config_object, existing_bets=existing_bets)
         if puck_location:
             table.puck.place(puck_location)
