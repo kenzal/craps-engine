@@ -142,34 +142,40 @@ class Engine:
                 new_bets_after_roll.append(bet)
             # All Traveling Bets
             elif bet.placement is None and dice_total in self.table.get_valid_points():
-                # when point rolls
-                if isinstance(bet, Come):
-                    found = get_bet_from_list(bet_list=bets_after_roll,
-                                              bet_type=Come,
-                                              bet_placement=dice_total)
-                    if not found or found.wager != bet.wager:
-                        bet.placement = dice_total
-                    new_bets_after_roll.append(bet)
-                else:
-                    bet.placement = dice_total
-                    new_bets_after_roll.append(bet)
+                self._point_set_for_bet(bet, bets_after_roll, new_bets_after_roll)
             elif bet.placement == dice_total:
-                if isinstance(bet, Come):
-                    found = get_bet_from_list(bet_list=bets_after_roll,
-                                              bet_type=Come,
-                                              bet_placement=None)
-                    if not found or found.wager != bet.wager:
-                        self.table.returned_bets.append(bet)
-                    else:
-                        new_bets_after_roll.append(bet)
-                else:
-                    bet.placement = None
-                    new_bets_after_roll.append(bet)
+                self._point_hit_for_bet(bet, bets_after_roll, new_bets_after_roll)
             elif dice_total == 7 and bet.is_winner(self.dice_roll):
                 self.table.returned_bets.append(bet)
             else:
                 new_bets_after_roll.append(bet)
         return new_bets_after_roll
+
+    def _point_hit_for_bet(self, bet, bets_after_roll, new_bets_after_roll):
+        if isinstance(bet, Come):
+            found = get_bet_from_list(bet_list=bets_after_roll,
+                                      bet_type=Come,
+                                      bet_placement=None)
+            if not found or found.wager != bet.wager:
+                self.table.returned_bets.append(bet)
+            else:
+                new_bets_after_roll.append(bet)
+        else:
+            bet.placement = None
+            new_bets_after_roll.append(bet)
+
+    def _point_set_for_bet(self, bet, bets_after_roll, new_bets_after_roll):
+        dice_total = self.dice_roll.total()
+        if isinstance(bet, Come):
+            found = get_bet_from_list(bet_list=bets_after_roll,
+                                      bet_type=Come,
+                                      bet_placement=dice_total)
+            if not found or found.wager != bet.wager:
+                bet.placement = dice_total
+            new_bets_after_roll.append(bet)
+        else:
+            bet.placement = dice_total
+            new_bets_after_roll.append(bet)
 
     def process_instructions(self):
         """Process the instructions list."""
