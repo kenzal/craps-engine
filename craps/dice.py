@@ -91,7 +91,7 @@ class Outcome:
         return not self.__eq__(other)
 
     def __hash__(self):
-        return hash(sorted([self._d1, self._d2]))
+        return hash(tuple(sorted([self._d1, self._d2])))
 
     def __str__(self):
         return f"({', '.join(sorted([str(self._d1), str(self._d2)]))})"

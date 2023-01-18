@@ -5,7 +5,7 @@ import craps.table.config as TableConfig
 from craps.dice import Outcome
 
 
-# noinspection DuplicateAssertionTestSmellUnittest
+# noinspection DuplicateAssertionTestSmellUnittest,DuplicatedCode
 class TestBet(unittest.TestCase):
     puck: table.puck.Puck
     table_config: TableConfig

@@ -11,9 +11,11 @@ class TestConfig(unittest.TestCase):
         puck = craps.table.puck.Puck(TableConfig.Config())
         self.assertTrue(puck.is_off())
         self.assertFalse(puck.is_on())
+        self.assertIsNone(puck.for_json())
         with self.assertRaises(craps.table.puck.IllegalMove):
             puck.remove()
         puck.place(4)
+        self.assertEqual(puck.for_json(), 4)
         with self.assertRaises(craps.table.puck.IllegalMove):
             puck.place(5)
         puck.remove()
@@ -21,6 +23,9 @@ class TestConfig(unittest.TestCase):
             puck.place(2)
         with self.assertRaises(craps.table.puck.IllegalMove):
             puck.place(0)
+        puck.set_from_json('10')
+        self.assertTrue(puck.is_on())
+        self.assertEqual(10, puck.location())
 
     def test_crapless(self):
         puck = craps.table.puck.Puck(TableConfig.Config(is_crapless=True, odds=ConfigOdds.CraplessOdds.flat(5)))
@@ -38,7 +43,6 @@ class TestConfig(unittest.TestCase):
         puck.remove()
         with self.assertRaises(craps.table.puck.IllegalMove):
             puck.place(0)
-
 
 
 if __name__ == '__main__':

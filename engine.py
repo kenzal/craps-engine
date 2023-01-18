@@ -76,6 +76,7 @@ class Engine:
 
         :return: dict
         """
+        self.roll_dice()
         winners = [bet for bet in self.table.bets if bet.is_on() and bet.is_winner(self.dice_roll)]
         losers = [bet for bet in self.table.bets if bet.is_on() and bet.is_loser(self.dice_roll)]
         bets_after_roll = [copy.copy(bet) for bet in self.table.bets if bet not in losers]
