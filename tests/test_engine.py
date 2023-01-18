@@ -3,7 +3,8 @@ import unittest
 
 from JsonEncoder import ComplexEncoder
 from craps.table import Bet, Come, Config, Puck
-from engine import Engine, get_bet_from_list
+from engine import Engine
+from craps.table.bet import get_bet_from_list
 from craps.dice import Outcome as DiceOutcome
 
 
@@ -34,7 +35,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
 
     def test_pass_line_winner(self):
         req = {"table": {"existing_bets": [{"type": "PassLine", "wager": 10, "placement": 4}], "puck_location": 4},
@@ -45,7 +46,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertIsNone(result['new_table']['existing_bets'][0].location)
+        self.assertIsNone(result['new_table']['existing_bets'][0].placement)
 
     def test_come_set(self):
         req = {"table":        {"puck_location": 4},
@@ -57,7 +58,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
 
     def test_come_down_and_up(self):
         req = {"table":        {"existing_bets": [{"type": "Come", "wager": 10, "placement": 4}], "puck_location": 6},
@@ -83,7 +84,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(1, len(result['returned']))
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
         self.assertEqual(10, result['new_table']['existing_bets'][0].wager)
         self.assertEqual(5, result['returned'][0].wager)
 
@@ -97,7 +98,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(0, len(result['returned']))
-        self.assertEqual(8, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(8, result['new_table']['existing_bets'][0].placement)
         self.assertEqual(5, result['new_table']['existing_bets'][0].wager)
 
     def test_dont_pass_set(self):
@@ -108,7 +109,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
 
     def test_winning_dont_pass_returned(self):
         req = {"table": {"existing_bets": [{"type": "DontCome", "wager": 5, "placement": 8}],
@@ -121,7 +122,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(3, 4))
         self.assertIsNone(result['new_table']['puck_location'])
         self.assertEqual(1, len(result['returned']))
-        self.assertEqual(8, result['returned'][0].location)
+        self.assertEqual(8, result['returned'][0].placement)
 
     def test_circuit(self):
         req = {"instructions": {"place": [{"type": "PassLine", "wager": 10}]}, "dice": [1, 3]}
@@ -131,7 +132,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].location)
+        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
         req = {"table":        json.loads(json.dumps(result['new_table'], cls=ComplexEncoder)),
                "instructions": {"set_odds": [{"type": "PassLine", "wager": 10, "placement": 4, "odds": 20}]},
                "dice":         [2, 2]}
@@ -141,7 +142,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(2, 2))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertIsNone(result['new_table']['existing_bets'][0].location)
+        self.assertIsNone(result['new_table']['existing_bets'][0].placement)
         self.assertEqual(result['summary']['total_winnings_to_player'], 50)
 
 

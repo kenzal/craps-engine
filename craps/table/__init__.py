@@ -97,13 +97,13 @@ class Table:
                 if any(existing.get_signature().type == PassLine for existing in self.bets):
                     raise DuplicateBetException(
                         f"Cannot place additional {bet.__class__.__name__} bet")
-                if bet.location is not None:
+                if bet.placement is not None:
                     raise InvalidBet(f"Cannot place {bet.__class__.__name__} bet with point")
                 if self.puck.is_on():
                     raise InvalidBet(
                         f"Cannon place {bet.__class__.__name__} bet while point is established")
             if bet.get_signature().type in (Come, DontCome):
-                if bet.location is not None:
+                if bet.placement is not None:
                     raise InvalidBet(f"Cannot place {bet.__class__.__name__} bet with point")
                 if self.puck.is_off():
                     raise InvalidBet(

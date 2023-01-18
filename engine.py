@@ -15,35 +15,7 @@ import jsonschema
 from JsonEncoder import ComplexEncoder
 from craps.dice import Outcome as DiceOutcome
 from craps.table import Table
-from craps.table.bet import Bet, PassLine, Come
-
-
-def get_bet_from_list(bet_list: list[Bet],
-                      bet_type: typing.Union[type, str],
-                      bet_placement: typing.Union[int, None, DiceOutcome]) \
-        -> typing.Union[None, Bet, list[Bet]]:
-    """
-    Return matching bet(s) from list
-
-    :param bet_list: List of bets to be filtered
-    :type bet_list: list[Bet]
-    :param bet_type: Type of bet to filter for
-    :type bet_type: type|str
-    :param bet_placement:
-    :type bet_placement: None|int|craps.dice.Outcome
-    :return: Any Found Bets
-    :rtype: None|Bet|list[Bet]
-    """
-    found = [existing for existing in bet_list if
-             existing.get_signature().type.__name__ == (bet_type.__name__ if
-                                                        isinstance(bet_type, type) else
-                                                        bet_type)
-             and existing.get_signature().placement == bet_placement]
-    if len(found) == 0:
-        return None
-    if len(found) == 1:
-        return found[0]
-    return found
+from craps.table.bet import PassLine, Come, get_bet_from_list
 
 
 class Engine:
@@ -169,19 +141,19 @@ class Engine:
             if not isinstance(bet, PassLine):
                 new_bets_after_roll.append(bet)
             # All Traveling Bets
-            elif bet.location is None and dice_total in self.table.get_valid_points():
+            elif bet.placement is None and dice_total in self.table.get_valid_points():
                 # when point rolls
                 if isinstance(bet, Come):
                     found = get_bet_from_list(bet_list=bets_after_roll,
                                               bet_type=Come,
                                               bet_placement=dice_total)
                     if not found or found.wager != bet.wager:
-                        bet.location = dice_total
+                        bet.placement = dice_total
                     new_bets_after_roll.append(bet)
                 else:
-                    bet.location = dice_total
+                    bet.placement = dice_total
                     new_bets_after_roll.append(bet)
-            elif bet.location == dice_total:
+            elif bet.placement == dice_total:
                 if isinstance(bet, Come):
                     found = get_bet_from_list(bet_list=bets_after_roll,
                                               bet_type=Come,
@@ -191,7 +163,7 @@ class Engine:
                     else:
                         new_bets_after_roll.append(bet)
                 else:
-                    bet.location = None
+                    bet.placement = None
                     new_bets_after_roll.append(bet)
             elif dice_total == 7 and bet.is_winner(self.dice_roll):
                 self.table.returned_bets.append(bet)

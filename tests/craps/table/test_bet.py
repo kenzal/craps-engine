@@ -89,7 +89,7 @@ class TestBet(unittest.TestCase):
                     outcome = self.outcomes[total]
                     if total != 7:
                         with self.subTest(i=total):
-                            bet = table.bet.Come(self.wager, puck=puck, location=total)
+                            bet = table.bet.Come(self.wager, puck=puck, placement=total)
                             self.assertEqual(bet.max_odds(),
                                              config.odds[total] * self.wager,
                                              "Max Odds should be the max odds for the place number times the wager")
@@ -105,7 +105,7 @@ class TestBet(unittest.TestCase):
     def test_put(self):
         point_roll = self.outcomes[4]
         other_point = self.outcomes[6]
-        bet = table.bet.Put(self.wager, puck=self.puck, location=point_roll.total())
+        bet = table.bet.Put(self.wager, puck=self.puck, placement=point_roll.total())
         self.assertTrue(bet.allow_odds)
         self.assertFalse(bet.can_toggle)
         self.assertFalse(bet.has_vig)
@@ -149,7 +149,7 @@ class TestBet(unittest.TestCase):
                     outcome = self.outcomes[total]
                     if total != 7:
                         with self.subTest(i=total):
-                            bet = table.bet.Put(self.wager, puck=puck, location=total)
+                            bet = table.bet.Put(self.wager, puck=puck, placement=total)
                             self.assertTrue(bet.is_winner(outcome))
                             self.assertEqual(self.wager, bet.get_payout(outcome))
                             odds_bet = self.wager * 2
@@ -225,7 +225,7 @@ class TestBet(unittest.TestCase):
                     outcome = self.outcomes[total]
                     if total != 7:
                         with self.subTest(i=total):
-                            bet = table.bet.Come(self.wager, puck=puck, location=total)
+                            bet = table.bet.Come(self.wager, puck=puck, placement=total)
                             self.assertTrue(bet.is_winner(outcome))
                             self.assertEqual(self.wager, bet.get_payout(outcome))
                             odds_bet = self.wager * 2
@@ -294,7 +294,7 @@ class TestBet(unittest.TestCase):
                     if total != 7:
                         with self.subTest(i=total):
                             wager = 5
-                            bet = table.bet.DontPass(wager, puck=self.puck, location=total)
+                            bet = table.bet.DontPass(wager, puck=self.puck, placement=total)
                             odds_payout = int(bet.max_odds() / config.get_true_odds(total))
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
@@ -352,7 +352,7 @@ class TestBet(unittest.TestCase):
                     if total != 7:
                         with self.subTest(i=total):
                             wager = 5
-                            bet = table.bet.DontCome(wager, puck=self.puck, location=total)
+                            bet = table.bet.DontCome(wager, puck=self.puck, placement=total)
                             odds_payout = int(bet.max_odds() / config.get_true_odds(total))
                             bet.set_odds(bet.max_odds())
                             self.assertEqual(bet.get_payout(seven_out), wager + odds_payout)
@@ -412,7 +412,7 @@ class TestBet(unittest.TestCase):
         seven_outcome = self.outcomes[7]
         bet = table.bet.Place(self.wager,
                               puck=self.puck,
-                              location=place_outcome.total())
+                              placement=place_outcome.total())
         self.assertFalse(bet.allow_odds)
         self.assertTrue(bet.can_toggle)
         self.assertFalse(bet.has_vig)
@@ -475,7 +475,7 @@ class TestBet(unittest.TestCase):
                     outcome = self.outcomes[total]
                     with self.subTest(i=total):
                         bet = table.bet.Place(self.wager, puck=self.puck,
-                                              location=total)
+                                              placement=total)
                         self.assertTrue(bet.is_winner(outcome))
                         self.assertEqual(bet.get_payout(outcome),
                                          int(self.wager * config.get_place_odds(total)))
@@ -489,7 +489,7 @@ class TestBet(unittest.TestCase):
         place_outcome = self.outcomes[4]
         other_outcome = self.outcomes[6]
         seven_outcome = self.outcomes[7]
-        bet = table.bet.Buy(self.wager, puck=self.puck, location=place_outcome.total())
+        bet = table.bet.Buy(self.wager, puck=self.puck, placement=place_outcome.total())
         self.assertFalse(bet.allow_odds)
         self.assertTrue(bet.can_toggle)
         self.assertTrue(bet.has_vig)
@@ -551,7 +551,7 @@ class TestBet(unittest.TestCase):
                 for total in config.get_valid_points():
                     outcome = self.outcomes[total]
                     with self.subTest(i=total):
-                        bet = table.bet.Buy(self.wager, puck=self.puck, location=total)
+                        bet = table.bet.Buy(self.wager, puck=self.puck, placement=total)
                         self.assertTrue(bet.is_winner(outcome))
                         self.assertEqual(bet.get_payout(outcome),
                                          int(self.wager * config.get_true_odds(
@@ -568,7 +568,7 @@ class TestBet(unittest.TestCase):
         seven_outcome = self.outcomes[7]
         bet = table.bet.Lay(self.wager,
                             puck=self.puck,
-                            location=place_outcome.total())
+                            placement=place_outcome.total())
         self.assertFalse(bet.allow_odds)
         self.assertTrue(bet.can_toggle)
         self.assertTrue(bet.has_vig)
@@ -608,7 +608,7 @@ class TestBet(unittest.TestCase):
                 for total in config.get_valid_points():
                     seven_out = self.outcomes[7]
                     with self.subTest(i=total):
-                        bet = table.bet.Lay(self.wager, puck=puck, location=total)
+                        bet = table.bet.Lay(self.wager, puck=puck, placement=total)
                         self.assertTrue(bet.is_winner(seven_out))
                         self.assertEqual(bet.get_payout(seven_out),
                                          int(self.wager / config.get_true_odds(
@@ -629,7 +629,7 @@ class TestBet(unittest.TestCase):
         other_outcome = self.outcomes[6]
         bet = table.bet.Hardway(self.wager,
                                 puck=self.puck,
-                                location=bet_hard_outcome.total())
+                                placement=bet_hard_outcome.total())
         self.assertFalse(bet.allow_odds)
         self.assertTrue(bet.can_toggle)
         self.assertFalse(bet.has_vig)
@@ -688,7 +688,7 @@ class TestBet(unittest.TestCase):
             with self.subTest(i=outcome.total()):
                 bet = table.bet.Hardway(self.wager,
                                         puck=self.puck,
-                                        location=outcome.total())
+                                        placement=outcome.total())
                 bet.turn_on()
                 self.assertTrue(bet.is_winner(outcome))
                 self.assertEqual(bet.get_payout(outcome),
@@ -756,7 +756,7 @@ class TestBet(unittest.TestCase):
             with self.subTest(i=i):
                 bet = table.bet.Hop(self.wager,
                                     puck=self.puck,
-                                    outcome=outcome)
+                                    placement=outcome)
                 self.assertFalse(bet.allow_odds)
                 self.assertFalse(bet.can_toggle)
                 self.assertFalse(bet.has_vig)
@@ -819,7 +819,7 @@ class TestBet(unittest.TestCase):
                               i=i):
                 bet = table.bet.HornHigh(self.wager,
                                          puck=self.puck,
-                                         location=11)  # Horn High Yo
+                                         placement=11)  # Horn High Yo
                 self.assertFalse(bet.allow_odds)
                 self.assertFalse(bet.can_toggle)
                 self.assertFalse(bet.has_vig)
