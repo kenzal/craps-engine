@@ -2,9 +2,9 @@ import json
 import unittest
 
 from JsonEncoder import ComplexEncoder
-from craps.table import Bet, Come, Config, Puck
+from craps.table import BetAbstract, Come, Config, Puck
 from engine import Engine, process_request
-from craps.table.bet import get_bet_from_list
+from craps.bet import get_bet_from_list
 from craps.dice import Outcome as DiceOutcome
 
 
@@ -18,8 +18,8 @@ class TestEngine(unittest.TestCase):
         config = Config
         puck = Puck(table_config=config)
         bet_list = [
-            Bet.from_signature({"type": "Come", "wager": 10, "placement": 4}, puck=puck),
-            Bet.from_signature({"type": "Come", "wager": 10, "placement": None}, puck=puck),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": 4}, puck=puck),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": None}, puck=puck),
         ]
         self.assertIsInstance(bet_list[0], Come)
         self.assertIsInstance(bet_list[1], Come)

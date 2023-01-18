@@ -6,6 +6,8 @@ import typing
 
 from craps.table.config import Config
 
+PuckLocation = typing.Union[int, None]
+
 
 class IllegalMove(Exception):
     """Illegal Move Exception"""
@@ -18,7 +20,7 @@ class Puck:
     Each puck is aware of its table configuration in order to determine legal placement.
     """
     table_config: Config  #: Craps Table Configuration - used to determine legal placement
-    _location: typing.Union[int, None] = None
+    _location: PuckLocation = None
 
     def __init__(self, table_config: Config):
         """
@@ -53,7 +55,7 @@ class Puck:
         """
         return not self.is_on()
 
-    def location(self) -> typing.Union[int, None]:
+    def location(self) -> PuckLocation:
         """
         None or int(2-12) for the puck location.
 

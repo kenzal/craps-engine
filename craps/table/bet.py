@@ -1,112 +1,42 @@
 """
 Module: Craps.Table.Bet
 """
-import dataclasses
 import sys
 import typing
 from collections.abc import Iterable
-from enum import Enum
+from craps.table.interface import TableInterface
 
-import craps.table.config as TableConfig
+from craps.bet import BetStatus, InvalidBet, BadBetAction, BetSignature, BetInterface, FairOdds, \
+    BetPlacement
 from craps.dice import Outcome as DiceOutcome
-from craps.table.puck import Puck
 
 
-class BetStatus(Enum):
-    """
-    Enum for On/Off Bet Status
-    """
-    ON = 'ON'  #: Bet is On
-    OFF = 'OFF'  #: Bet is Off
-
-
-class InvalidBet(Exception):
-    """Invalid Bet Exception"""
-
-
-class BadBetAction(Exception):
-    """
-    Bad Bet Action Exception
-
-    Raised when an illegal action is attempted on a bet
-    """
-
-
-@dataclasses.dataclass(frozen=True)
-class BetSignature:
-    """
-    Simple representation of a bet regardless of table/puck
-    """
-    type: type  #: Type of bet
-    wager: int  #: Wager on the bet
-    odds: int = None  #: Any fair odds placed on the bet
-    placement: typing.Union[None, int, DiceOutcome] = None  #: Where the bet is.
-    override_puck: typing.Union[BetStatus, None] = None  #: BetStatus regardless of puck status
-    payout: int = None  #: Payout on the bet (used after dice roll for winning bets)
-
-    def for_json(self):
-        """
-        Table object as primitive types for json encoding
-
-        :return: dict representing table definition
-        :rtype: dict
-        """
-        puck = self.override_puck
-        if isinstance(puck, BetStatus):
-            puck = puck.value
-        return {key: val for key, val in {
-            'type':          self.type.__name__,
-            'wager':         self.wager,
-            'odds':          self.odds,
-            'placement':     self.placement,
-            'override_puck': puck
-        }.items() if val is not None}
-
-    def same_type_and_place(self, other):
-        """
-        Comparator function to compare type and location of bet
-
-        :param other: Bet to compare two
-        :type other: Bet|BetSignature
-        :return: Bet is same type and location
-        :rtype: bool
-        """
-        if isinstance(other, Bet):
-            return other.get_signature().type == self.type \
-                and other.get_signature().placement == self.placement
-        return self.type == other.type and self.placement == other.placement
-
-
-class Bet:
+class BetAbstract(BetInterface):
     """
     Abstract Bet Class
 
     Encapsulates shared functionality
     """
-    wager: int  #: Wager on the bet
-    odds: int = None  #: Any fair odds placed on the bet
-    _puck: Puck
-    _table_config: TableConfig
-    placement: typing.Union[DiceOutcome, int, None] = None  #: Where the bet is.
     allow_odds: bool = False  #: if fair odds are allowed on the bet
     has_vig: bool = False  #: if a vigorish is required
     can_toggle: bool = False  #: if the bet can be toggled On and Off
     single_roll: bool = False  #: if the bet only exists for a single roll
     multi_bet: int = 0  #: Bet is made of multiple bets if > 0
-    _override_toggle: typing.Union[BetStatus, None] = None
+    _override_toggle: typing.Optional[BetStatus] = None
+    _table: TableInterface
 
     def __init__(self,
                  wager: int,
-                 puck: Puck,
-                 odds: typing.Union[int, None] = None,
-                 placement: typing.Union[DiceOutcome, int, None] = None):
+                 table: TableInterface,
+                 odds: FairOdds = None,
+                 placement: BetPlacement = None):
         """
         Constructor
 
         :param wager: wager on the bet
         :type wager: int
-        :param puck: puck object for the table
-        :type puck: Puck
+        :param table: Table on which the bet is placed
+        :type table: TableInterface
         :param odds: any existing fair odds on the bet
         :type odds: int
         :param placement: location of the bet
@@ -118,8 +48,7 @@ class Bet:
             raise InvalidBet(
                 f'Wager for {self.__class__.__name__} must be multiple of {self.multi_bet}')
         self.wager = wager
-        self._puck = puck
-        self._table_config = puck.table_config
+        self._table = table
         self.placement = placement
         if odds:
             if self.allow_odds:
@@ -127,6 +56,9 @@ class Bet:
             else:
                 raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
         self._check_valid()
+
+    def get_type(self) -> str:
+        return self.__class__.__name__
 
     def can_remove(self) -> bool:
         """
@@ -167,7 +99,7 @@ class Bet:
         :rtype: BetSignature
         :raise TypeError: if attempting to get signature of base class
         """
-        if self.__class__ == Bet:
+        if self.__class__ == BetAbstract:
             raise TypeError('Cannot create signature of Bet Class')
         return BetSignature(type=self.__class__,
                             wager=self.wager,
@@ -176,29 +108,29 @@ class Bet:
                             override_puck=self._override_toggle)
 
     @classmethod
-    def from_signature(cls, signature: BetSignature, puck: Puck):
+    def from_signature(cls, signature: BetSignature, table: TableInterface):
         """
         Build a Bet from a BetSignature
 
         :param signature: Bet Signature
         :type signature: BetSignature
-        :param puck: Point Puck on the table
-        :type puck: Puck
+        :param table: Table on which the bet is placed
+        :type table: TableInterface
         :return: net Bet Instance
-        :rtype: Bet
+        :rtype: BetAbstract
         """
         if isinstance(signature, dict):
             if isinstance(signature['type'], str):
                 current_module = sys.modules[__name__]
                 lower_dict = {a.lower(): a for a in dir(current_module) if a[0:2] != '__'}
                 signature['type'] = getattr(current_module, lower_dict[signature['type'].lower()])
-            if signature['type'] == Bet or not issubclass(signature['type'], Bet):
+            if signature['type'] == BetAbstract or not issubclass(signature['type'], BetAbstract):
                 raise InvalidBet(f"{signature['type'].__name__} is not a valid Bet Class")
             signature = BetSignature(**signature)
-        if cls == Bet:
-            return signature.type.from_signature(signature=signature, puck=puck)
+        if cls == BetAbstract:
+            return signature.type.from_signature(signature=signature, table=table)
         bet = cls(wager=signature.wager,
-                  puck=puck,
+                  table=table,
                   odds=signature.odds,
                   placement=signature.placement)
         if signature.override_puck is not None:
@@ -284,7 +216,7 @@ class Bet:
             return True
         if self._override_toggle == BetStatus.OFF:
             return False
-        return self._puck.is_on()
+        return self._table.point_set()
 
     def turn_off(self):
         """
@@ -336,7 +268,7 @@ class Bet:
         Comparator function to compare type and location of bet
 
         :param other: Bet to compare two
-        :type other: Bet|BetSignature
+        :type other: BetAbstract|BetSignature
         :return: Bet is same type and location
         :rtype: bool
         """
@@ -349,7 +281,7 @@ class Bet:
         return str(self.get_signature())
 
 
-class PassLine(Bet):
+class PassLine(BetAbstract):
     """Pass Line Bet"""
     allow_odds = True
 
@@ -363,7 +295,7 @@ class PassLine(Bet):
         """
         if self.placement:
             raise BadBetAction(f'Can not move {self.__class__.__name__} bet after point.')
-        if point not in self._table_config.get_valid_points():
+        if point not in self._table.config.get_valid_points():
             raise BadBetAction(f'Illegal location for {self.__class__.__name__} bet')
         self.placement = point
 
@@ -378,7 +310,7 @@ class PassLine(Bet):
         if self.placement and outcome.total() == 7:
             return True
         if self.placement is None and \
-                not self._table_config.is_crapless and \
+                not self._table.config.is_crapless and \
                 outcome.total() in [2, 3, 12]:
             return True
         return False
@@ -395,7 +327,7 @@ class PassLine(Bet):
             return True
         if self.placement is None and outcome.total() == 7:
             return True
-        if self.placement is None and not self._table_config.is_crapless and outcome.total() == 11:
+        if self.placement is None and not self._table.config.is_crapless and outcome.total() == 11:
             return True
         return False
 
@@ -409,7 +341,7 @@ class PassLine(Bet):
         """
         if not self.is_winner(outcome):
             return 0
-        true_odds = self._table_config.get_true_odds(self.placement) if self.placement else 0
+        true_odds = self._table.config.get_true_odds(self.placement) if self.placement else 0
         odds_payout = int(self.odds * true_odds) if self.odds else 0
         return self.wager + odds_payout
 
@@ -419,7 +351,7 @@ class PassLine(Bet):
 
         :rtype: int
         """
-        return int(self._table_config.odds[self.placement] * self.wager)
+        return int(self._table.config.odds[self.placement] * self.wager)
 
     def can_remove(self) -> bool:
         """
@@ -444,7 +376,7 @@ class Put(PassLine):
     def _check_valid(self):
         if not self.placement:
             raise InvalidBet('Put bet requires a location')
-        if self.placement not in self._table_config.get_valid_points():
+        if self.placement not in self._table.config.get_valid_points():
             raise InvalidBet(f'{self.placement} is not a valid location for a Put bet')
 
 
@@ -456,7 +388,7 @@ class DontPass(PassLine):
     """Don't Pass Bet"""
 
     def _check_valid(self):
-        if self._table_config.is_crapless:
+        if self._table.config.is_crapless:
             raise InvalidBet(f'{self.__class__.__name__} is not a valid bet for Crapless')
 
     def is_winner(self, outcome: DiceOutcome) -> bool:
@@ -471,7 +403,7 @@ class DontPass(PassLine):
             return True
         if self.placement is None \
                 and outcome.total() in [2, 3, 12] \
-                and outcome.total() != self._table_config.dont_bar:
+                and outcome.total() != self._table.config.dont_bar:
             return True
         return False
 
@@ -504,8 +436,8 @@ class DontPass(PassLine):
 
         :rtype: int
         """
-        pass_odds = self._table_config.get_true_odds(self.placement)  # 2/1
-        max_win = int(self._table_config.odds[self.placement] * self.wager)  # 3 * 5 = 15
+        pass_odds = self._table.config.get_true_odds(self.placement)  # 2/1
+        max_win = int(self._table.config.odds[self.placement] * self.wager)  # 3 * 5 = 15
         return int(max_win * pass_odds)  # 60 / 2 = 30
 
     def get_payout(self, outcome: DiceOutcome) -> int:
@@ -518,7 +450,7 @@ class DontPass(PassLine):
         """
         if not self.is_winner(outcome):
             return 0
-        true_odds = self._table_config.get_true_odds(self.placement) if self.placement else 0
+        true_odds = self._table.config.get_true_odds(self.placement) if self.placement else 0
         odds_payout = int(self.odds / true_odds) if self.odds else 0
         return self.wager + odds_payout
 
@@ -551,7 +483,7 @@ class DontCome(DontPass):
     """Don't Come Bet"""
 
 
-class Field(Bet):
+class Field(BetAbstract):
     """Field Bet"""
     single_roll = True  #: if the bet only exists for a single roll
 
@@ -576,13 +508,13 @@ class Field(Bet):
         if not self.is_winner(outcome):
             return 0
         if outcome.total() == 2:
-            return self.wager * self._table_config.field_2_pay
+            return self.wager * self._table.config.field_2_pay
         if outcome.total() == 12:
-            return self.wager * self._table_config.field_12_pay
+            return self.wager * self._table.config.field_12_pay
         return self.wager
 
 
-class Place(Bet):
+class Place(BetAbstract):
     """Place Bet"""
     can_toggle = True
 
@@ -596,7 +528,7 @@ class Place(Bet):
         """
         if not self.is_winner(outcome):
             return 0
-        return int(self.wager * self._table_config.get_place_odds(outcome.total()))
+        return int(self.wager * self._table.config.get_place_odds(outcome.total()))
 
     def is_loser(self, outcome: DiceOutcome):
         """
@@ -621,7 +553,7 @@ class Place(Bet):
     def _check_valid(self):
         if not self.placement:
             raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
-        if self.placement not in self._table_config.get_valid_points():
+        if self.placement not in self._table.config.get_valid_points():
             raise InvalidBet(
                 '{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
@@ -633,13 +565,13 @@ class Buy(Place):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return int(self.wager * self._table_config.get_true_odds(outcome.total())) - self.get_vig()
+        return int(self.wager * self._table.config.get_true_odds(outcome.total())) - self.get_vig()
 
     def return_vig(self) -> int:
-        return self.get_vig() if self._table_config.pay_vig_before_buy else 0
+        return self.get_vig() if self._table.config.pay_vig_before_buy else 0
 
 
-class Lay(Bet):
+class Lay(BetAbstract):
     """Lay Bet"""
     has_vig = True
     _override_toggle = BetStatus.ON
@@ -654,24 +586,24 @@ class Lay(Bet):
     def _check_valid(self):
         if not self.placement:
             raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
-        if self.placement not in self._table_config.get_valid_points():
+        if self.placement not in self._table.config.get_valid_points():
             raise InvalidBet(
                 f'{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return int(self.wager / self._table_config.get_true_odds(self.placement)) - self.get_vig()
+        return int(self.wager / self._table.config.get_true_odds(self.placement)) - self.get_vig()
 
     def get_vig(self) -> int:
-        return int(self.wager / self._table_config.get_true_odds(
+        return int(self.wager / self._table.config.get_true_odds(
             self.placement) * .05) if self.has_vig else 0
 
     def return_vig(self) -> int:
-        return self.get_vig() if self._table_config.pay_vig_before_lay else 0
+        return self.get_vig() if self._table.config.pay_vig_before_lay else 0
 
 
-class Hardway(Bet):
+class Hardway(BetAbstract):
     """Hardway Bet"""
     can_toggle = True
 
@@ -694,7 +626,7 @@ class Hardway(Bet):
         return self.wager * (7 if outcome.total() in [4, 10] else 9)
 
 
-class Prop(Bet):
+class Prop(BetAbstract):
     """Abstract Proposition Bet"""
     single_roll = True
 
@@ -732,12 +664,11 @@ class Hop(Prop):
     """Hop Bet (includes Horn Numbers)"""
     single_roll = True
 
-    def __init__(self, wager: int, puck: Puck, placement: DiceOutcome):
-        if not isinstance(placement, DiceOutcome):
-            if not isinstance(placement, Iterable):
+    def _check_valid(self):
+        if not isinstance(self.placement, DiceOutcome):
+            if not isinstance(self.placement, Iterable):
                 raise InvalidBet("Unknown Hop")
-            placement = DiceOutcome(*placement)
-        super().__init__(wager=wager, puck=puck, odds=None, placement=placement)
+            self.placement = DiceOutcome(*self.placement)
 
     def is_winner(self, outcome: DiceOutcome):
         return outcome == self.placement
@@ -745,24 +676,12 @@ class Hop(Prop):
     def get_payout(self, outcome: DiceOutcome) -> int:
         if not self.is_winner(outcome):
             return 0
-        return self.wager * (self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                             else self._table_config.hop_easy_pay_to_one)
+        return self.wager * (self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+                             else self._table.config.hop_easy_pay_to_one)
 
     def get_signature(self):
         return BetSignature(type=self.__class__, wager=self.wager, odds=self.odds,
                             placement=self.placement)
-
-    @classmethod
-    def from_signature(cls, signature: BetSignature, puck: Puck):
-        return cls(wager=signature.wager,
-                   puck=puck,
-                   placement=signature.placement)
-
-    def same_type_and_place(self, other):
-        if isinstance(other, BetSignature):
-            return self.get_signature().type == other.type \
-                and self.get_signature().placement == other.placement
-        return self.__class__ == other.__class__ and self.placement == other.placement
 
 
 class Horn(Prop):
@@ -776,8 +695,8 @@ class Horn(Prop):
         if not self.is_winner(outcome):
             return 0
         return int(self.wager / self.multi_bet * (
-            self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-            else self._table_config.hop_easy_pay_to_one))
+            self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+            else self._table.config.hop_easy_pay_to_one))
 
 
 class HornHigh(Horn):
@@ -796,11 +715,11 @@ class HornHigh(Horn):
             return 0
         if outcome.total() == self.placement:
             return int(self.wager / self.multi_bet * 2 * (
-                self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-                else self._table_config.hop_easy_pay_to_one))
+                self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+                else self._table.config.hop_easy_pay_to_one))
         return int(self.wager / self.multi_bet * (
-            self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-            else self._table_config.hop_easy_pay_to_one))
+            self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+            else self._table.config.hop_easy_pay_to_one))
 
 
 class World(Prop):
@@ -817,8 +736,8 @@ class World(Prop):
         if not self.is_winner(outcome):
             return 0
         return int(self.wager / self.multi_bet * (
-            self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-            else self._table_config.hop_easy_pay_to_one))
+            self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+            else self._table.config.hop_easy_pay_to_one))
 
 
 class Craps3Way(Prop):
@@ -832,8 +751,8 @@ class Craps3Way(Prop):
         if not self.is_winner(outcome):
             return 0
         return int(self.wager / self.multi_bet * (
-            self._table_config.hop_hard_pay_to_one if outcome.is_hard()
-            else self._table_config.hop_easy_pay_to_one))
+            self._table.config.hop_hard_pay_to_one if outcome.is_hard()
+            else self._table.config.hop_easy_pay_to_one))
 
 
 class CE(Prop):
@@ -848,32 +767,4 @@ class CE(Prop):
             return 0
         if outcome.total() in [2, 3, 12]:
             return int(self.wager / self.multi_bet * 7)
-        return int(self.wager / self.multi_bet * self._table_config.hop_easy_pay_to_one)
-
-
-def get_bet_from_list(bet_list: list[Bet],
-                      bet_type: typing.Union[type, str],
-                      bet_placement: typing.Union[int, None, DiceOutcome]) \
-        -> typing.Union[None, Bet, list[Bet]]:
-    """
-    Return matching bet(s) from list
-
-    :param bet_list: List of bets to be filtered
-    :type bet_list: list[Bet]
-    :param bet_type: Type of bet to filter for
-    :type bet_type: type|str
-    :param bet_placement:
-    :type bet_placement: None|int|craps.dice.Outcome
-    :return: Any Found Bets
-    :rtype: None|Bet|list[Bet]
-    """
-    found = [existing for existing in bet_list if
-             existing.get_signature().type.__name__ == (bet_type.__name__ if
-                                                        isinstance(bet_type, type) else
-                                                        bet_type)
-             and existing.get_signature().placement == bet_placement]
-    if len(found) == 0:
-        return None
-    if len(found) == 1:
-        return found[0]
-    return found
+        return int(self.wager / self.multi_bet * self._table.config.hop_easy_pay_to_one)

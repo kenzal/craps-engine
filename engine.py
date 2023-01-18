@@ -15,7 +15,8 @@ import jsonschema
 from JsonEncoder import ComplexEncoder
 from craps.dice import Outcome as DiceOutcome
 from craps.table import Table
-from craps.table.bet import PassLine, Come, get_bet_from_list
+from craps.table.bet import PassLine, Come
+from craps.bet import get_bet_from_list
 
 
 class Engine:
