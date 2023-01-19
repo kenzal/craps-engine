@@ -11,6 +11,76 @@ from craps.bet import BetStatus, InvalidBet, BadBetAction, BetSignature, BetInte
 from craps.dice import Outcome as DiceOutcome
 
 
+class ToggleableBet:
+    """Toggleable Bet"""
+    _override_toggle: typing.Optional[BetStatus] = None
+    can_toggle: bool = True  #: if the bet can be toggled On and Off
+    _table: TableInterface
+
+    def is_on(self) -> bool:
+        """
+        Bet is active
+
+        :rtype: bool
+        """
+        if self._override_toggle == BetStatus.ON or not self.can_toggle:
+            return True
+        if self._override_toggle == BetStatus.OFF:
+            return False
+        return self._table.point_set()
+
+    def turn_off(self):
+        """
+        Set bet to inactive
+
+        :raise BadBetAction: on un-toggleable bet
+        """
+        if not self.can_toggle:
+            raise BadBetAction(f'Can not turn off {self.__class__.__name__} bet')
+        self._override_toggle = BetStatus.OFF
+
+    def turn_on(self):
+        """
+        Set bet to active
+        """
+        self._override_toggle = BetStatus.ON
+
+    def follow_puck(self):
+        """
+        Set bet activity to follow puck status
+        """
+        self._override_toggle = None
+
+
+class TravelingBet:
+    """Traveling Bet"""
+    placement: BetPlacement = None  #: Where the bet is.
+    _table: TableInterface
+
+    def is_set(self) -> bool:
+        """
+        Bet is set
+
+        :return: Bet is set
+        :rtype: bool
+        """
+        return self.placement is not None
+
+    def move(self, point: int):
+        """
+        Assign bet to point
+
+        :param point: where the bet is to be moved
+        :type point: int
+        :raise BadBetAction: on illegal move request
+        """
+        if self.placement:
+            raise BadBetAction(f'Can not move {self.__class__.__name__} bet after point.')
+        if point not in self._table.config.get_valid_points():
+            raise BadBetAction(f'Illegal location for {self.__class__.__name__} bet')
+        self.placement = point
+
+
 class BetAbstract(BetInterface):
     """
     Abstract Bet Class
@@ -56,6 +126,14 @@ class BetAbstract(BetInterface):
             else:
                 raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
         self._check_valid()
+
+    def is_on(self) -> bool:
+        """
+        Bet is active
+
+        :rtype: bool
+        """
+        return self._table.point_set()
 
     def get_type(self) -> str:
         return self.__class__.__name__
@@ -206,40 +284,6 @@ class BetAbstract(BetInterface):
         :rtype: int
         """
 
-    def is_on(self) -> bool:
-        """
-        Bet is active
-
-        :rtype: bool
-        """
-        if self._override_toggle == BetStatus.ON or not self.can_toggle:
-            return True
-        if self._override_toggle == BetStatus.OFF:
-            return False
-        return self._table.point_set()
-
-    def turn_off(self):
-        """
-        Set bet to inactive
-
-        :raise BadBetAction: on un-toggleable bet
-        """
-        if not self.can_toggle:
-            raise BadBetAction(f'Can not turn off {self.__class__.__name__} bet')
-        self._override_toggle = BetStatus.OFF
-
-    def turn_on(self):
-        """
-        Set bet to active
-        """
-        self._override_toggle = BetStatus.ON
-
-    def follow_puck(self):
-        """
-        Set bet activity to follow puck status
-        """
-        self._override_toggle = None
-
     def increase(self, amount: int):
         """
         Increase wager by amount
@@ -281,23 +325,9 @@ class BetAbstract(BetInterface):
         return str(self.get_signature())
 
 
-class PassLine(BetAbstract):
+class PassLine(TravelingBet, BetAbstract):
     """Pass Line Bet"""
     allow_odds = True
-
-    def move(self, point: int):
-        """
-        Assign bet to point
-
-        :param point: where the bet is to be moved
-        :type point: int
-        :raise BadBetAction: on illegal move request
-        """
-        if self.placement:
-            raise BadBetAction(f'Can not move {self.__class__.__name__} bet after point.')
-        if point not in self._table.config.get_valid_points():
-            raise BadBetAction(f'Illegal location for {self.__class__.__name__} bet')
-        self.placement = point
 
     def is_loser(self, outcome: DiceOutcome) -> bool:
         """
@@ -384,8 +414,9 @@ class Come(PassLine):
     """Come Bet"""
 
 
-class DontPass(PassLine):
+class DontPass(TravelingBet, BetAbstract):
     """Don't Pass Bet"""
+    allow_odds = True
 
     def _check_valid(self):
         if self._table.config.is_crapless:
@@ -514,9 +545,8 @@ class Field(BetAbstract):
         return self.wager
 
 
-class Place(BetAbstract):
+class Place(ToggleableBet, BetAbstract):
     """Place Bet"""
-    can_toggle = True
 
     def get_payout(self, outcome: DiceOutcome) -> int:
         """
@@ -571,11 +601,10 @@ class Buy(Place):
         return self.get_vig() if self._table.config.pay_vig_before_buy else 0
 
 
-class Lay(BetAbstract):
+class Lay(ToggleableBet, BetAbstract):
     """Lay Bet"""
     has_vig = True
     _override_toggle = BetStatus.ON
-    can_toggle = True
 
     def is_winner(self, outcome: DiceOutcome):
         return self.is_on() and outcome.total() == 7
@@ -603,9 +632,8 @@ class Lay(BetAbstract):
         return self.get_vig() if self._table.config.pay_vig_before_lay else 0
 
 
-class Hardway(BetAbstract):
+class Hardway(ToggleableBet, BetAbstract):
     """Hardway Bet"""
-    can_toggle = True
 
     def _check_valid(self):
         if not self.placement:

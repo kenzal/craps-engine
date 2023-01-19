@@ -15,7 +15,7 @@ import jsonschema
 from JsonEncoder import ComplexEncoder
 from craps.dice import Outcome as DiceOutcome
 from craps.table import Table
-from craps.table.bet import PassLine, Come
+from craps.table.bet import Come, TravelingBet, BetAbstract
 from craps.bet import get_bet_from_list
 
 
@@ -78,8 +78,14 @@ class Engine:
         :return: dict
         """
         self.roll_dice()
-        winners = [bet for bet in self.table.bets if bet.is_on() and bet.is_winner(self.dice_roll)]
-        losers = [bet for bet in self.table.bets if bet.is_on() and bet.is_loser(self.dice_roll)]
+        winners = [bet for bet in self.table.bets if
+                   isinstance(bet, BetAbstract) and
+                   bet.is_on() and
+                   bet.is_winner(self.dice_roll)]
+        losers = [bet for bet in self.table.bets if
+                  isinstance(bet, BetAbstract) and
+                  bet.is_on() and
+                  bet.is_loser(self.dice_roll)]
         bets_after_roll = [copy.copy(bet) for bet in self.table.bets if bet not in losers]
         new_puck_location = self.table.puck.location()
         winner_signatures = []
@@ -104,7 +110,8 @@ class Engine:
                 'puck_location':  self.table.puck.location(),
                 'bets':           self.table.bets,
                 'value_on_table': sum(bet.wager for bet in self.table.bets),
-                'value_at_risk':  sum(bet.wager for bet in self.table.bets if bet.is_on()),
+                'value_at_risk':  sum(bet.wager for bet in self.table.bets if
+                                      isinstance(bet, BetAbstract) and bet.is_on()),
             },
             'hash':      self.hash,
             'winners':   winner_signatures,
@@ -119,7 +126,7 @@ class Engine:
                 'dice_outcome':             self.dice_roll,
                 'total_returned_to_player': sum(
                     bet.wager + bet.return_vig() + (bet.odds if bet.odds else 0) for
-                    bet in self.table.returned_bets),
+                    bet in self.table.returned_bets if isinstance(bet, BetAbstract)),
                 'total_winnings_to_player': sum(bet.get_payout(self.dice_roll) for bet in winners),
                 'value_of_losers':          sum(bet.wager for bet in losers),
                 'value_on_table':           sum(bet.wager for bet in bets_after_roll),
@@ -140,7 +147,7 @@ class Engine:
         dice_total = self.dice_roll.total()
         new_bets_after_roll = []
         for bet in bets_after_roll:
-            if not isinstance(bet, PassLine):
+            if not isinstance(bet, TravelingBet):
                 new_bets_after_roll.append(bet)
             # All Traveling Bets
             elif bet.placement is None and dice_total in self.table.get_valid_points():

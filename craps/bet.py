@@ -40,14 +40,31 @@ class BetInterface:
     odds: FairOdds = None  #: Any fair odds placed on the bet
     placement: BetPlacement = None  #: Where the bet is.
 
-    def for_json(self) -> typing.Any:
-        pass
+    def for_json(self) -> dict:
+        """
+        Table object as primitive types for json encoding
+
+        :return: dict representing table definition
+        :rtype: dict
+        """
 
     def same_type_and_place(self, other) -> bool:
-        pass
+        """
+        Comparator function to compare type and location of bet
+
+        :param other: Bet to compare two
+        :type other: Bet|BetSignature
+        :return: Bet is same type and location
+        :rtype: bool
+        """
 
     def get_type(self) -> str:
-        pass
+        """
+        Type of Bet
+
+        :return: Type of Bet
+        :rtype: str
+        """
 
 
 BetList = list[BetInterface]
@@ -64,6 +81,15 @@ class BetSignature(BetInterface):
     placement: BetPlacement = None  #: Where the bet is.
     override_puck: typing.Union[BetStatus, None] = None  #: BetStatus regardless of puck status
     payout: int = None  #: Payout on the bet (used after dice roll for winning bets)
+
+    def get_type(self) -> str:
+        """
+        Type of Bet
+
+        :return: Type of Bet
+        :rtype: str
+        """
+        return self.type.__name__
 
     def for_json(self):
         """

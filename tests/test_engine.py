@@ -2,7 +2,7 @@ import json
 import unittest
 
 from JsonEncoder import ComplexEncoder
-from craps.table import BetAbstract, Come, Config, Puck
+from craps.table import BetAbstract, Come, Config, Puck, Table
 from engine import Engine, process_request
 from craps.bet import get_bet_from_list
 from craps.dice import Outcome as DiceOutcome
@@ -15,11 +15,12 @@ class TestEngine(unittest.TestCase):
         self.assertIsNone(get_bet_from_list(bet_list=[], bet_type='Come', bet_placement=None))
 
     def test_get_bet_from_list_of_similar(self):
-        config = Config
+        config = Config()
         puck = Puck(table_config=config)
+        table = Table(config=config, puck_location=puck.location())
         bet_list = [
-            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": 4}, puck=puck),
-            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": None}, puck=puck),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": 4}, table=table),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": None}, table=table),
         ]
         self.assertIsInstance(bet_list[0], Come)
         self.assertIsInstance(bet_list[1], Come)

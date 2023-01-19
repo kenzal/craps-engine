@@ -52,7 +52,7 @@ class Table(TableInterface):
             self.puck.place(puck_location)
         if existing_bets:
             existing_bets = [BetAbstract.from_signature(signature=signature,
-                                                        puck=self.puck) for signature in existing_bets]
+                                                        table=self) for signature in existing_bets]
             for i, bet_a in enumerate(existing_bets):
                 if any(bet_a.same_type_and_place(bet_b) for bet_b in existing_bets[:i]):
                     raise DuplicateBetException('Duplicate Bets found in existing bets')
@@ -91,7 +91,7 @@ class Table(TableInterface):
         }
 
     def _process_place(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             if bet.odds is not None:
                 raise InvalidBet("Cannot place bet with odds")
@@ -115,7 +115,7 @@ class Table(TableInterface):
             self.bets.append(bet)
 
     def _process_retrieve(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             if not bet.can_remove():
                 raise ContractBetException(f"Cannot retrieve contract bet {bet}")
@@ -126,7 +126,7 @@ class Table(TableInterface):
                          self.bets if not bet.same_type_and_place(existing_bet)]
 
     def _process_update(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
@@ -139,35 +139,35 @@ class Table(TableInterface):
                     existing_bet.wager = bet.wager
 
     def _process_set_odds(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
                     existing_bet.set_odds(bet.odds)
 
     def _process_remove_odds(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
                     existing_bet.remove_odds()
 
     def _process_turn_on(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
                     existing_bet.turn_on()
 
     def _process_turn_off(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
                     existing_bet.turn_off()
 
     def _process_follow_puck(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, puck=self.puck) for signature in bets]
+        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
