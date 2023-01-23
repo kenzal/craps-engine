@@ -1,5 +1,5 @@
 """
-Module: Craps.Table.Bet
+Module: Craps.Table.Bet_Abstracts
 """
 import sys
 import typing
