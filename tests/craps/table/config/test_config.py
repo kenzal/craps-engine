@@ -54,6 +54,19 @@ class TestConfig(unittest.TestCase):
         with self.assertRaises(TableConfig.InconsistentConfig):
             TableConfig.Config(bet_max=12)
 
+    def test_from_json_string(self):
+        json_str = '{"is_crapless":true,"place_2_12_odds":[25,5],"place_3_11_odds":[13,5],"odds":"flat(2)"}'
+        json_obj = json.loads(json_str)
+        self.assertEqual(TableConfig.Config.from_json(json_str), TableConfig.Config.from_json(json_obj))
+        bad_odds_1 = {'odds': 'not_a_method'}
+        with self.assertRaises(TableConfig.InconsistentConfig):
+            TableConfig.Config.from_json(bad_odds_1)
+        bad_odds_2 = {'odds': 'bad_method()'}
+        with self.assertRaises(TableConfig.InconsistentConfig):
+            TableConfig.Config.from_json(bad_odds_2)
+        explicit_odds = {'odds': {4: 3, 5: 4, 6: 5, 8: 5, 9: 4, 10: 6}}
+        TableConfig.Config.from_json(explicit_odds)
+
 
 if __name__ == '__main__':
     unittest.main()

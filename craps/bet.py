@@ -22,11 +22,11 @@ class BetStatus(Enum):
     OFF = 'OFF'  #: Bet is Off
 
 
-class InvalidBet(Exception):
+class InvalidBetException(Exception):
     """Invalid Bet Exception"""
 
 
-class BadBetAction(Exception):
+class BadBetActionException(Exception):
     """
     Bad Bet Action Exception
 
@@ -53,7 +53,7 @@ class BetInterface:
         Comparator function to compare type and location of bet
 
         :param other: Bet to compare two
-        :type other: Bet|BetSignature
+        :type other: BetInterface
         :return: Bet is same type and location
         :rtype: bool
         """
@@ -102,7 +102,7 @@ class BetSignature(BetInterface):
         if isinstance(puck, BetStatus):
             puck = puck.value
         return {key: val for key, val in {
-            'type':          self.type.__name__,
+            'type':          self.get_type(),
             'wager':         self.wager,
             'odds':          self.odds,
             'placement':     self.placement,
@@ -120,12 +120,12 @@ class BetSignature(BetInterface):
         """
         if not isinstance(other, BetInterface):
             return False
-        return self.type == other.get_type() and self.placement == other.placement
+        return self.get_type() == other.get_type() and self.placement == other.placement
 
 
 def get_bet_from_list(bet_list: BetList,
                       bet_type: typing.Union[type, str],
-                      bet_placement: BetPlacement) \
+                      bet_placement: BetPlacement = None) \
         -> typing.Union[None, BetInterface, BetList]:
     """
     Return matching bet(s) from list

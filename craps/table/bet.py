@@ -3,82 +3,11 @@ Module: Craps.Table.Bet
 """
 import sys
 import typing
-from collections.abc import Iterable
-from craps.table.interface import TableInterface
 
-from craps.bet import BetStatus, InvalidBet, BadBetAction, BetSignature, BetInterface, FairOdds, \
-    BetPlacement
+from craps.bet import BetStatus, InvalidBetException, BadBetActionException, BetSignature, \
+    BetInterface, FairOdds, BetPlacement
 from craps.dice import Outcome as DiceOutcome
-
-
-class ToggleableBet:
-    """Toggleable Bet"""
-    _override_toggle: typing.Optional[BetStatus] = None
-    can_toggle: bool = True  #: if the bet can be toggled On and Off
-    _table: TableInterface
-
-    def is_on(self) -> bool:
-        """
-        Bet is active
-
-        :rtype: bool
-        """
-        if self._override_toggle == BetStatus.ON or not self.can_toggle:
-            return True
-        if self._override_toggle == BetStatus.OFF:
-            return False
-        return self._table.point_set()
-
-    def turn_off(self):
-        """
-        Set bet to inactive
-
-        :raise BadBetAction: on un-toggleable bet
-        """
-        if not self.can_toggle:
-            raise BadBetAction(f'Can not turn off {self.__class__.__name__} bet')
-        self._override_toggle = BetStatus.OFF
-
-    def turn_on(self):
-        """
-        Set bet to active
-        """
-        self._override_toggle = BetStatus.ON
-
-    def follow_puck(self):
-        """
-        Set bet activity to follow puck status
-        """
-        self._override_toggle = None
-
-
-class TravelingBet:
-    """Traveling Bet"""
-    placement: BetPlacement = None  #: Where the bet is.
-    _table: TableInterface
-
-    def is_set(self) -> bool:
-        """
-        Bet is set
-
-        :return: Bet is set
-        :rtype: bool
-        """
-        return self.placement is not None
-
-    def move(self, point: int):
-        """
-        Assign bet to point
-
-        :param point: where the bet is to be moved
-        :type point: int
-        :raise BadBetAction: on illegal move request
-        """
-        if self.placement:
-            raise BadBetAction(f'Can not move {self.__class__.__name__} bet after point.')
-        if point not in self._table.config.get_valid_points():
-            raise BadBetAction(f'Illegal location for {self.__class__.__name__} bet')
-        self.placement = point
+from craps.table.interface import TableInterface
 
 
 class BetAbstract(BetInterface):
@@ -113,9 +42,9 @@ class BetAbstract(BetInterface):
         :type placement: DiceOutcome|int|None
         """
         if wager <= 0:
-            raise InvalidBet('Wager must be positive integer')
+            raise InvalidBetException('Wager must be positive integer')
         if self.multi_bet and wager % self.multi_bet:
-            raise InvalidBet(
+            raise InvalidBetException(
                 f'Wager for {self.__class__.__name__} must be multiple of {self.multi_bet}')
         self.wager = wager
         self._table = table
@@ -124,7 +53,7 @@ class BetAbstract(BetInterface):
             if self.allow_odds:
                 self.set_odds(odds)
             else:
-                raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
+                raise InvalidBetException(f'Odds not allowed for {self.__class__.__name__} bet')
         self._check_valid()
 
     def is_on(self) -> bool:
@@ -186,7 +115,7 @@ class BetAbstract(BetInterface):
                             override_puck=self._override_toggle)
 
     @classmethod
-    def from_signature(cls, signature: BetSignature, table: TableInterface):
+    def from_signature(cls, signature: typing.Union[BetSignature, dict], table: TableInterface):
         """
         Build a Bet from a BetSignature
 
@@ -203,7 +132,7 @@ class BetAbstract(BetInterface):
                 lower_dict = {a.lower(): a for a in dir(current_module) if a[0:2] != '__'}
                 signature['type'] = getattr(current_module, lower_dict[signature['type'].lower()])
             if signature['type'] == BetAbstract or not issubclass(signature['type'], BetAbstract):
-                raise InvalidBet(f"{signature['type'].__name__} is not a valid Bet Class")
+                raise InvalidBetException(f"{signature['type'].__name__} is not a valid Bet Class")
             signature = BetSignature(**signature)
         if cls == BetAbstract:
             return signature.type.from_signature(signature=signature, table=table)
@@ -244,9 +173,9 @@ class BetAbstract(BetInterface):
         if self.allow_odds and 0 < odds <= max_odds:
             self.odds = odds
         elif odds > max_odds:
-            raise InvalidBet(f'Odds can not exceed {max_odds} for this bet')
+            raise InvalidBetException(f'Odds can not exceed {max_odds} for this bet')
         else:
-            raise InvalidBet(f'Odds not allowed for {self.__class__.__name__} bet')
+            raise InvalidBetException(f'Odds not allowed for {self.__class__.__name__} bet')
 
     def remove_odds(self):
         """
@@ -302,17 +231,12 @@ class BetAbstract(BetInterface):
         """
         return self.get_signature()
 
-    def __eq__(self, other):
-        if isinstance(other, BetSignature):
-            return self.get_signature() == other
-        return self.__class__ == other.__class__ and dir(self) == dir(other)
-
     def same_type_and_place(self, other):
         """
         Comparator function to compare type and location of bet
 
         :param other: Bet to compare two
-        :type other: BetAbstract|BetSignature
+        :type other: BetInterface
         :return: Bet is same type and location
         :rtype: bool
         """
@@ -321,12 +245,116 @@ class BetAbstract(BetInterface):
                 and self.get_signature().placement == other.placement
         return self.__class__ == other.__class__ and self.placement == other.placement
 
+    def __eq__(self, other):
+        if not isinstance(other, BetAbstract):
+            raise NotImplemented
+        return self.__class__ == other.__class__ \
+            and self._table == other._table \
+            and self.placement == other.placement
+
+    def __hash__(self):
+        return hash((self.__class__, self._table, self.placement))
+
     def __str__(self):
         return str(self.get_signature())
 
 
-class PassLine(TravelingBet, BetAbstract):
-    """Pass Line Bet"""
+def ignore_placement_for_compare(cls):
+    def eq_comp(self, other):
+        if not isinstance(other, BetAbstract):
+            raise NotImplemented
+        return self.__class__ == other.__class__ and self._table == other._table
+
+    def new_hash(self):
+        return hash((self.__class__, self._table, 'Placement Ignored'))
+
+    setattr(cls, '__eq__', eq_comp)
+    setattr(cls, '__hash__', new_hash)
+    return cls
+
+
+class PropBetAbstract(BetAbstract):
+    """Abstract Proposition Bet"""
+    single_roll = True
+
+    def get_signature(self):
+        if self.__class__ == PropBetAbstract:
+            raise TypeError('Cannot create signature of Prop Class')
+        return super().get_signature()
+
+
+class ToggleableBetAbstract(BetAbstract):
+    """Toggleable Bet"""
+    _override_toggle: typing.Optional[BetStatus] = None
+    can_toggle: bool = True  #: if the bet can be toggled On and Off
+    _table: TableInterface
+
+    def is_on(self) -> bool:
+        """
+        Bet is active
+
+        :rtype: bool
+        """
+        if self._override_toggle == BetStatus.ON or not self.can_toggle:
+            return True
+        if self._override_toggle == BetStatus.OFF:
+            return False
+        return self._table.point_set()
+
+    def turn_off(self):
+        """
+        Set bet to inactive
+
+        :raise BadBetAction: on un-toggleable bet
+        """
+        if not self.can_toggle:
+            raise BadBetActionException(f'Can not turn off {self.__class__.__name__} bet')
+        self._override_toggle = BetStatus.OFF
+
+    def turn_on(self):
+        """
+        Set bet to active
+        """
+        self._override_toggle = BetStatus.ON
+
+    def follow_puck(self):
+        """
+        Set bet activity to follow puck status
+        """
+        self._override_toggle = None
+
+
+class TravelingBetAbstract(BetAbstract):
+    """Traveling Bet"""
+    placement: BetPlacement = None  #: Where the bet is.
+    _table: TableInterface
+
+    def is_set(self) -> bool:
+        """
+        Bet is set
+
+        :return: Bet is set
+        :rtype: bool
+        """
+        return self.placement is not None
+
+    def move(self, point: int):
+        """
+        Assign bet to point
+
+        :param point: where the bet is to be moved
+        :type point: int
+        :raise BadBetAction: on illegal move request
+        """
+        if self.placement:
+            raise BadBetActionException(f'Can not move {self.__class__.__name__} bet after point.')
+        if point not in self._table.config.get_valid_points():
+            raise BadBetActionException(f'Illegal location for {self.__class__.__name__} bet')
+        self.placement = point
+
+
+class Come(TravelingBetAbstract):
+    """Come Bet"""
     allow_odds = True
 
     def is_loser(self, outcome: DiceOutcome) -> bool:
@@ -400,27 +428,28 @@ class PassLine(TravelingBet, BetAbstract):
         return self.placement is None
 
 
-class Put(PassLine):
+class Put(Come):
     """Put Bet"""
 
     def _check_valid(self):
         if not self.placement:
-            raise InvalidBet('Put bet requires a location')
+            raise InvalidBetException('Put bet requires a location')
         if self.placement not in self._table.config.get_valid_points():
-            raise InvalidBet(f'{self.placement} is not a valid location for a Put bet')
+            raise InvalidBetException(f'{self.placement} is not a valid location for a Put bet')
 
 
-class Come(PassLine):
-    """Come Bet"""
+@ignore_placement_for_compare
+class PassLine(Come):
+    """Pass Line Bet"""
 
 
-class DontPass(TravelingBet, BetAbstract):
-    """Don't Pass Bet"""
+class DontCome(TravelingBetAbstract):
+    """Don't Come Bet"""
     allow_odds = True
 
     def _check_valid(self):
         if self._table.config.is_crapless:
-            raise InvalidBet(f'{self.__class__.__name__} is not a valid bet for Crapless')
+            raise InvalidBetException(f'{self.__class__.__name__} is not a valid bet for Crapless')
 
     def is_winner(self, outcome: DiceOutcome) -> bool:
         """
@@ -459,7 +488,7 @@ class DontPass(TravelingBet, BetAbstract):
         :param amount: Amount to increase wager by
         :type amount: int
         """
-        raise InvalidBet("Can not increase contract Don't bets")
+        raise InvalidBetException("Can not increase contract Don't bets")
 
     def max_odds(self) -> int:
         """
@@ -510,8 +539,9 @@ class DontPass(TravelingBet, BetAbstract):
         return True
 
 
-class DontCome(DontPass):
-    """Don't Come Bet"""
+@ignore_placement_for_compare
+class DontPass(DontCome):
+    """Don't Pass Bet"""
 
 
 class Field(BetAbstract):
@@ -545,7 +575,7 @@ class Field(BetAbstract):
         return self.wager
 
 
-class Place(ToggleableBet, BetAbstract):
+class Place(ToggleableBetAbstract):
     """Place Bet"""
 
     def get_payout(self, outcome: DiceOutcome) -> int:
@@ -582,9 +612,9 @@ class Place(ToggleableBet, BetAbstract):
 
     def _check_valid(self):
         if not self.placement:
-            raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
+            raise InvalidBetException(f'{self.__class__.__name__} bet requires a location')
         if self.placement not in self._table.config.get_valid_points():
-            raise InvalidBet(
+            raise InvalidBetException(
                 '{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
 
@@ -601,7 +631,7 @@ class Buy(Place):
         return self.get_vig() if self._table.config.pay_vig_before_buy else 0
 
 
-class Lay(ToggleableBet, BetAbstract):
+class Lay(ToggleableBetAbstract):
     """Lay Bet"""
     has_vig = True
     _override_toggle = BetStatus.ON
@@ -614,9 +644,9 @@ class Lay(ToggleableBet, BetAbstract):
 
     def _check_valid(self):
         if not self.placement:
-            raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
+            raise InvalidBetException(f'{self.__class__.__name__} bet requires a location')
         if self.placement not in self._table.config.get_valid_points():
-            raise InvalidBet(
+            raise InvalidBetException(
                 f'{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
     def get_payout(self, outcome: DiceOutcome) -> int:
@@ -632,14 +662,14 @@ class Lay(ToggleableBet, BetAbstract):
         return self.get_vig() if self._table.config.pay_vig_before_lay else 0
 
 
-class Hardway(ToggleableBet, BetAbstract):
+class Hardway(ToggleableBetAbstract):
     """Hardway Bet"""
 
     def _check_valid(self):
         if not self.placement:
-            raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
+            raise InvalidBetException(f'{self.__class__.__name__} bet requires a location')
         if self.placement not in [4, 6, 8, 10]:
-            raise InvalidBet(
+            raise InvalidBetException(
                 f'{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
     def is_winner(self, outcome: DiceOutcome):
@@ -654,17 +684,7 @@ class Hardway(ToggleableBet, BetAbstract):
         return self.wager * (7 if outcome.total() in [4, 10] else 9)
 
 
-class Prop(BetAbstract):
-    """Abstract Proposition Bet"""
-    single_roll = True
-
-    def get_signature(self):
-        if self.__class__ == Prop:
-            raise TypeError('Cannot create signature of Prop Class')
-        return super().get_signature()
-
-
-class AnySeven(Prop):
+class AnySeven(PropBetAbstract):
     """Any Seven Bet"""
 
     def is_winner(self, outcome: DiceOutcome):
@@ -676,7 +696,7 @@ class AnySeven(Prop):
         return self.wager * 4
 
 
-class AnyCraps(Prop):
+class AnyCraps(PropBetAbstract):
     """Any Craps Bet"""
 
     def is_winner(self, outcome: DiceOutcome):
@@ -688,14 +708,14 @@ class AnyCraps(Prop):
         return self.wager * 7
 
 
-class Hop(Prop):
+class Hop(PropBetAbstract):
     """Hop Bet (includes Horn Numbers)"""
     single_roll = True
 
     def _check_valid(self):
         if not isinstance(self.placement, DiceOutcome):
-            if not isinstance(self.placement, Iterable):
-                raise InvalidBet("Unknown Hop")
+            if not isinstance(self.placement, list):
+                raise InvalidBetException("Unknown Hop")
             self.placement = DiceOutcome(*self.placement)
 
     def is_winner(self, outcome: DiceOutcome):
@@ -712,7 +732,7 @@ class Hop(Prop):
                             placement=self.placement)
 
 
-class Horn(Prop):
+class Horn(PropBetAbstract):
     """Multi-Bet: Horn Numbers"""
     multi_bet = 4
 
@@ -733,9 +753,9 @@ class HornHigh(Horn):
 
     def _check_valid(self):
         if not self.placement:
-            raise InvalidBet(f'{self.__class__.__name__} bet requires a location')
+            raise InvalidBetException(f'{self.__class__.__name__} bet requires a location')
         if self.placement not in [2, 3, 11, 12]:
-            raise InvalidBet(
+            raise InvalidBetException(
                 f'{self.placement} is not a valid location for a {self.__class__.__name__} bet')
 
     def get_payout(self, outcome: DiceOutcome) -> int:
@@ -750,7 +770,7 @@ class HornHigh(Horn):
             else self._table.config.hop_easy_pay_to_one))
 
 
-class World(Prop):
+class World(PropBetAbstract):
     """World Bet: Horn Bet or AnySeven Bet"""
     multi_bet = 5
 
@@ -768,7 +788,7 @@ class World(Prop):
             else self._table.config.hop_easy_pay_to_one))
 
 
-class Craps3Way(Prop):
+class Craps3Way(PropBetAbstract):
     """Multi-Bet: 3-Way Craps (Hop the craps numbers)"""
     multi_bet = 3
 
@@ -783,7 +803,7 @@ class Craps3Way(Prop):
             else self._table.config.hop_easy_pay_to_one))
 
 
-class CE(Prop):
+class CE(PropBetAbstract):
     """Multi-Bet: Any Craps Or Eleven"""
     multi_bet = 2
 

@@ -14,9 +14,10 @@ import jsonschema
 
 from JsonEncoder import ComplexEncoder
 from craps.dice import Outcome as DiceOutcome
-from craps.table import Table
-from craps.table.bet import Come, TravelingBet, BetAbstract
+from craps.table import table
+from craps.table.bet import Come, TravelingBetAbstract, BetAbstract, PassLine
 from craps.bet import get_bet_from_list
+from craps.table.table import Table
 
 
 class Engine:
@@ -31,7 +32,7 @@ class Engine:
         The hash used to generate the dice roll
     dice_roll : None|DiceOutcome
         The dice outcome once made or specified
-    table : Table
+    table : table
         The craps table
     instructions : dict
         Set of instructions for the engine to manipulate bets *before* the roll
@@ -51,7 +52,7 @@ class Engine:
         Initialize a new engine
 
         :param table: Craps Table
-        :type table: Table|dict
+        :type table: table|dict
         :param instructions: Instruction Set For Dealers to process before the dice roll
         :type instructions: dict
         :param hash: SHA-256 hash string used initialize the dice roller
@@ -147,7 +148,7 @@ class Engine:
         dice_total = self.dice_roll.total()
         new_bets_after_roll = []
         for bet in bets_after_roll:
-            if not isinstance(bet, TravelingBet):
+            if not isinstance(bet, TravelingBetAbstract):
                 new_bets_after_roll.append(bet)
             # All Traveling Bets
             elif bet.placement is None and dice_total in self.table.get_valid_points():
@@ -159,9 +160,9 @@ class Engine:
             else:
                 new_bets_after_roll.append(bet)
         return new_bets_after_roll
-
+{1}.add(2)
     def _point_hit_for_bet(self, bet, bets_after_roll, new_bets_after_roll):
-        if isinstance(bet, Come):
+        if isinstance(bet, Come) and not isinstance(bet, PassLine):
             found = get_bet_from_list(bet_list=bets_after_roll,
                                       bet_type=Come,
                                       bet_placement=None)

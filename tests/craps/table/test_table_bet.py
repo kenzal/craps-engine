@@ -1,15 +1,16 @@
 import unittest
 
 import craps.table.bet as TableBets
-from craps.bet import BadBetAction
+from craps.bet import BadBetActionException
 from craps.table.config import Config as TableConfig, StandardOdds, CraplessOdds
-from craps.table import Table
+
 from craps.dice import Outcome
-from craps.table import TableInterface
+from craps.table.interface import TableInterface
+from craps.table.table import Table
 
 
 # noinspection DuplicateAssertionTestSmellUnittest,DuplicatedCode
-class TestBet(unittest.TestCase):
+class TestTableBet(unittest.TestCase):
     table: TableInterface
     wager: int
 
@@ -53,7 +54,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(BadBetAction):  # Can not move twice
+        with self.assertRaises(BadBetActionException):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -115,7 +116,7 @@ class TestBet(unittest.TestCase):
         self.assertEqual(bet.wager, self.wager)
         self.assertIsNone(bet.odds)
 
-        with self.assertRaises(BadBetAction):  # Can not move twice
+        with self.assertRaises(BadBetActionException):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -192,7 +193,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(BadBetAction):  # Can not move twice
+        with self.assertRaises(BadBetActionException):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertFalse(bet.is_winner(self.outcomes[7]), 'Does not win on Seven')
@@ -263,7 +264,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(BadBetAction):  # Can not move twice
+        with self.assertRaises(BadBetActionException):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertTrue(bet.is_winner(self.outcomes[7]), 'Wins on Seven')
@@ -321,7 +322,7 @@ class TestBet(unittest.TestCase):
         self.assertFalse(bet.is_loser(point_roll), 'Does Not Lose on point number')
 
         bet.move(point_roll.total())
-        with self.assertRaises(BadBetAction):  # Can not move twice
+        with self.assertRaises(BadBetActionException):  # Can not move twice
             bet.move(other_point.total())
 
         self.assertTrue(bet.is_winner(self.outcomes[7]), 'Wins on Seven')

@@ -2,7 +2,10 @@ import json
 import unittest
 
 from JsonEncoder import ComplexEncoder
-from craps.table import BetAbstract, Come, Config, Puck, Table
+from craps.table.bet import BetAbstract, Come
+from craps.table.config import Config
+from craps.table.puck import Puck
+from craps.table.table import Table
 from engine import Engine, process_request
 from craps.bet import get_bet_from_list
 from craps.dice import Outcome as DiceOutcome
