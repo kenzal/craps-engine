@@ -263,6 +263,8 @@ class BetAbstract(BetInterface):
         return str(self.get_signature())
 
 
+ConcreteBetSet = set[BetAbstract]
+
 def ignore_placement_for_compare(cls):
     def eq_comp(self, other):
         if not isinstance(other, BetAbstract):
