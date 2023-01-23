@@ -178,12 +178,10 @@ class Table(TableInterface):
         bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
         for bet in bets:
             for existing_bet in self.bets:
+                if isinstance(existing_bet, (dict, BetSignature)):
+                    existing_bet = BetAbstract.from_signature(signature=existing_bet, table=self)
                 if not isinstance(existing_bet, BetAbstract):
-                    if isinstance(existing_bet, (dict, BetSignature)):
-                        existing_bet = BetAbstract.from_signature(signature=existing_bet,
-                                                                  table=self)
-                    else:
-                        raise InvalidBetException
+                    raise InvalidBetException
                 if not isinstance(existing_bet, ToggleableBetAbstract):
                     raise BadBetActionException
                 if bet.same_type_and_place(existing_bet):
