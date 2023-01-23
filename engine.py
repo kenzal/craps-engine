@@ -13,10 +13,11 @@ import typing
 import jsonschema
 
 from JsonEncoder import ComplexEncoder
+from craps.bet import get_bet_from_set, BetSignature
 from craps.dice import Outcome as DiceOutcome
 from craps.table import table
-from craps.table.bet import Come, TravelingBetAbstract, BetAbstract, PassLine
-from craps.bet import get_bet_from_set, BetSignature
+from craps.table.bet_abstracts import BetAbstract, TravelingBetAbstract
+from craps.table.bets import Come, PassLine
 from craps.table.table import Table
 
 

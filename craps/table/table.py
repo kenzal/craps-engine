@@ -1,5 +1,6 @@
 from . import DuplicateBetException, ContractBetException
-from .bet import ToggleableBetAbstract, BetAbstract, PassLine, DontPass, Come, DontCome
+from .bet_abstracts import BetAbstract, ToggleableBetAbstract
+from .bets import PassLine, DontPass, Come, DontCome
 from .config import Config
 from .interface import TableInterface
 from .puck import Puck, PuckLocation

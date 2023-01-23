@@ -1,7 +1,7 @@
 import unittest
 
 from craps.bet import BetStatus, BetSignature, get_bet_from_set, BetInterface
-from craps.table.bet import PassLine, Place, Field
+from craps.table.bets import PassLine, Place, Field
 
 
 class TestCrapsBet(unittest.TestCase):

@@ -1,6 +1,6 @@
 import unittest
 
-import craps.table.bet as TableBets
+import craps.table.bets as TableBets
 from craps.bet import BadBetActionException
 from craps.table.config import Config as TableConfig, StandardOdds, CraplessOdds
 
