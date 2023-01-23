@@ -13,9 +13,12 @@ import typing
 import jsonschema
 
 from JsonEncoder import ComplexEncoder
+from craps.bet import get_bet_from_set, BetSignature
 from craps.dice import Outcome as DiceOutcome
-from craps.table import Table
-from craps.table.bet import PassLine, Come, get_bet_from_list
+from craps.table import table
+from craps.table.bet_abstracts import BetAbstract, TravelingBetAbstract
+from craps.table.bets import Come, PassLine
+from craps.table.table import Table
 
 
 class Engine:
@@ -30,7 +33,7 @@ class Engine:
         The hash used to generate the dice roll
     dice_roll : None|DiceOutcome
         The dice outcome once made or specified
-    table : Table
+    table : table
         The craps table
     instructions : dict
         Set of instructions for the engine to manipulate bets *before* the roll
@@ -50,7 +53,7 @@ class Engine:
         Initialize a new engine
 
         :param table: Craps Table
-        :type table: Table|dict
+        :type table: table|dict
         :param instructions: Instruction Set For Dealers to process before the dice roll
         :type instructions: dict
         :param hash: SHA-256 hash string used initialize the dice roller
@@ -67,7 +70,7 @@ class Engine:
             self.dice_roll = dice if isinstance(dice, DiceOutcome) else DiceOutcome(*dice)
         self.table = table if isinstance(table, Table) else Table(**table)
         if instructions is None:
-            instructions = []
+            instructions = {}
         self.instructions = instructions
 
     def get_result(self):
@@ -77,17 +80,23 @@ class Engine:
         :return: dict
         """
         self.roll_dice()
-        winners = [bet for bet in self.table.bets if bet.is_on() and bet.is_winner(self.dice_roll)]
-        losers = [bet for bet in self.table.bets if bet.is_on() and bet.is_loser(self.dice_roll)]
+        winners = [bet for bet in self.table.bets if
+                   isinstance(bet, BetAbstract) and
+                   bet.is_on() and
+                   bet.is_winner(self.dice_roll)]
+        losers = [bet for bet in self.table.bets if
+                  isinstance(bet, BetAbstract) and
+                  bet.is_on() and
+                  bet.is_loser(self.dice_roll)]
         bets_after_roll = [copy.copy(bet) for bet in self.table.bets if bet not in losers]
         new_puck_location = self.table.puck.location()
-        winner_signatures = []
+        winner_signatures = set()
         for bet in winners:
             sig = bet.get_signature().for_json()
             sig['payout'] = bet.get_payout(self.dice_roll)
             if bet.has_vig:
-                sig['vig_payed'] = bet.get_vig()
-            winner_signatures.append(sig)
+                sig['vig_paid'] = bet.get_vig()
+            winner_signatures.add(BetSignature(**sig))
 
         dice_total = self.dice_roll.total()
 
@@ -103,7 +112,8 @@ class Engine:
                 'puck_location':  self.table.puck.location(),
                 'bets':           self.table.bets,
                 'value_on_table': sum(bet.wager for bet in self.table.bets),
-                'value_at_risk':  sum(bet.wager for bet in self.table.bets if bet.is_on()),
+                'value_at_risk':  sum(bet.wager for bet in self.table.bets if
+                                      isinstance(bet, BetAbstract) and bet.is_on()),
             },
             'hash':      self.hash,
             'winners':   winner_signatures,
@@ -118,7 +128,7 @@ class Engine:
                 'dice_outcome':             self.dice_roll,
                 'total_returned_to_player': sum(
                     bet.wager + bet.return_vig() + (bet.odds if bet.odds else 0) for
-                    bet in self.table.returned_bets),
+                    bet in self.table.returned_bets if isinstance(bet, BetAbstract)),
                 'total_winnings_to_player': sum(bet.get_payout(self.dice_roll) for bet in winners),
                 'value_of_losers':          sum(bet.wager for bet in losers),
                 'value_on_table':           sum(bet.wager for bet in bets_after_roll),
@@ -137,46 +147,46 @@ class Engine:
         # pylint: disable=too-many-branches
         # Logic Tree is as simple as I can get it,
         dice_total = self.dice_roll.total()
-        new_bets_after_roll = []
+        new_bets_after_roll = set()
         for bet in bets_after_roll:
-            if not isinstance(bet, PassLine):
-                new_bets_after_roll.append(bet)
+            if not isinstance(bet, TravelingBetAbstract):
+                new_bets_after_roll.add(bet)
             # All Traveling Bets
             elif bet.placement is None and dice_total in self.table.get_valid_points():
                 self._point_set_for_bet(bet, bets_after_roll, new_bets_after_roll)
             elif bet.placement == dice_total:
                 self._point_hit_for_bet(bet, bets_after_roll, new_bets_after_roll)
             elif dice_total == 7 and bet.is_winner(self.dice_roll):
-                self.table.returned_bets.append(bet)
+                self.table.returned_bets.add(bet)
             else:
-                new_bets_after_roll.append(bet)
+                new_bets_after_roll.add(bet)
         return new_bets_after_roll
 
     def _point_hit_for_bet(self, bet, bets_after_roll, new_bets_after_roll):
-        if isinstance(bet, Come):
-            found = get_bet_from_list(bet_list=bets_after_roll,
-                                      bet_type=Come,
-                                      bet_placement=None)
+        if isinstance(bet, Come) and not isinstance(bet, PassLine):
+            found = get_bet_from_set(bet_set=bets_after_roll,
+                                     bet_type=Come,
+                                     bet_placement=None)
             if not found or found.wager != bet.wager:
-                self.table.returned_bets.append(bet)
+                self.table.returned_bets.add(bet)
             else:
-                new_bets_after_roll.append(bet)
+                new_bets_after_roll.add(bet)
         else:
             bet.placement = None
-            new_bets_after_roll.append(bet)
+            new_bets_after_roll.add(bet)
 
     def _point_set_for_bet(self, bet, bets_after_roll, new_bets_after_roll):
         dice_total = self.dice_roll.total()
         if isinstance(bet, Come):
-            found = get_bet_from_list(bet_list=bets_after_roll,
-                                      bet_type=Come,
-                                      bet_placement=dice_total)
+            found = get_bet_from_set(bet_set=bets_after_roll,
+                                     bet_type=Come,
+                                     bet_placement=dice_total)
             if not found or found.wager != bet.wager:
                 bet.placement = dice_total
-            new_bets_after_roll.append(bet)
+            new_bets_after_roll.add(bet)
         else:
             bet.placement = dice_total
-            new_bets_after_roll.append(bet)
+            new_bets_after_roll.add(bet)
 
     def process_instructions(self):
         """Process the instructions list."""

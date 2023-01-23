@@ -2,9 +2,13 @@ import json
 import unittest
 
 from JsonEncoder import ComplexEncoder
-from craps.table import Bet, Come, Config, Puck
+from craps.table.bet_abstracts import BetAbstract
+from craps.table.bets import Come
+from craps.table.config import Config
+from craps.table.puck import Puck
+from craps.table.table import Table
 from engine import Engine, process_request
-from craps.table.bet import get_bet_from_list
+from craps.bet import get_bet_from_set
 from craps.dice import Outcome as DiceOutcome
 
 
@@ -12,21 +16,22 @@ from craps.dice import Outcome as DiceOutcome
 class TestEngine(unittest.TestCase):
 
     def test_get_bet_from_empty_list(self):
-        self.assertIsNone(get_bet_from_list(bet_list=[], bet_type='Come', bet_placement=None))
+        self.assertIsNone(get_bet_from_set(bet_set=[], bet_type='Come', bet_placement=None))
 
     def test_get_bet_from_list_of_similar(self):
-        config = Config
+        config = Config()
         puck = Puck(table_config=config)
+        table = Table(config=config, puck_location=puck.location())
         bet_list = [
-            Bet.from_signature({"type": "Come", "wager": 10, "placement": 4}, puck=puck),
-            Bet.from_signature({"type": "Come", "wager": 10, "placement": None}, puck=puck),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": 4}, table=table),
+            BetAbstract.from_signature({"type": "Come", "wager": 10, "placement": None}, table=table),
         ]
         self.assertIsInstance(bet_list[0], Come)
         self.assertIsInstance(bet_list[1], Come)
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type='Come', bet_placement=4), Come)
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type='Come', bet_placement=None), Come)
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=Come, bet_placement=4), Come)
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=Come, bet_placement=None), Come)
+        self.assertIsInstance(get_bet_from_set(bet_set=bet_list, bet_type='Come', bet_placement=4), Come)
+        self.assertIsInstance(get_bet_from_set(bet_set=bet_list, bet_type='Come', bet_placement=None), Come)
+        self.assertIsInstance(get_bet_from_set(bet_set=bet_list, bet_type=Come, bet_placement=4), Come)
+        self.assertIsInstance(get_bet_from_set(bet_set=bet_list, bet_type=Come, bet_placement=None), Come)
 
     def test_pass_line_set(self):
         req = {"instructions": {"place": [{"type": "PassLine", "wager": 10}]}, "dice": [1, 3]}
@@ -36,7 +41,9 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
+        self.assertEqual(1, len(result['new_table']['existing_bets']))
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(4, existing_bet.placement)
 
     def test_pass_line_winner(self):
         req = {"table": {"existing_bets": [{"type": "PassLine", "wager": 10, "placement": 4}], "puck_location": 4},
@@ -47,7 +54,9 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertIsNone(result['new_table']['existing_bets'][0].placement)
+        self.assertEqual(1, len(result['new_table']['existing_bets']))
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertIsNone(existing_bet.placement)
 
     def test_come_set(self):
         req = {"table":        {"puck_location": 4},
@@ -59,7 +68,9 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
+        self.assertEqual(1, len(result['new_table']['existing_bets']))
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(4, existing_bet.placement)
 
     def test_come_down_and_up(self):
         req = {"table":        {"existing_bets": [{"type": "Come", "wager": 10, "placement": 4}], "puck_location": 6},
@@ -71,8 +82,8 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(len(result['new_table']['existing_bets']), 2)
-        self.assertIsNotNone(get_bet_from_list(bet_list=result['new_table']['existing_bets'], bet_type='Come', bet_placement=4))
-        self.assertIsNotNone(get_bet_from_list(bet_list=result['new_table']['existing_bets'], bet_type='Come', bet_placement=None))
+        self.assertIsNotNone(get_bet_from_set(bet_set=result['new_table']['existing_bets'], bet_type='Come', bet_placement=4))
+        self.assertIsNotNone(get_bet_from_set(bet_set=result['new_table']['existing_bets'], bet_type='Come', bet_placement=None))
 
     def test_come_down_and_up_different_wagers(self):
         req = {"table":        {"existing_bets": [{"type": "Come", "wager": 5, "placement": 4}], "puck_location": 6},
@@ -85,9 +96,11 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(1, len(result['returned']))
-        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
-        self.assertEqual(10, result['new_table']['existing_bets'][0].wager)
-        self.assertEqual(5, result['returned'][0].wager)
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        returned_bet = result['returned'].copy().pop()
+        self.assertEqual(4, existing_bet.placement)
+        self.assertEqual(10, existing_bet.wager)
+        self.assertEqual(5, returned_bet.wager)
 
     def test_unaffected_dont_remains(self):
         req = {"table": {"existing_bets": [{"type": "DontCome", "wager": 5, "placement": 8}], "puck_location": 6},
@@ -99,8 +112,9 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(0, len(result['returned']))
-        self.assertEqual(8, result['new_table']['existing_bets'][0].placement)
-        self.assertEqual(5, result['new_table']['existing_bets'][0].wager)
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(8, existing_bet.placement)
+        self.assertEqual(5, existing_bet.wager)
 
     def test_dont_pass_set(self):
         req = {"instructions": {"place": [{"type": "DontPass", "wager": 10}]}, "dice": [1, 3]}
@@ -110,7 +124,9 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
+        self.assertEqual(1, len(result['new_table']['existing_bets']))
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(4, existing_bet.placement)
 
     def test_winning_dont_pass_returned(self):
         req = {"table": {"existing_bets": [{"type": "DontCome", "wager": 5, "placement": 8}],
@@ -123,7 +139,7 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(3, 4))
         self.assertIsNone(result['new_table']['puck_location'])
         self.assertEqual(1, len(result['returned']))
-        self.assertEqual(8, result['returned'][0].placement)
+        self.assertEqual(8, result['returned'].copy().pop().placement)
 
     def test_non_traveling_bet_remains(self):
         req = {"table": {"existing_bets": [{"type": "Place", "wager": 6, "placement": 8}],
@@ -136,8 +152,9 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(0, len(result['returned']))
-        self.assertEqual(8, result['new_table']['existing_bets'][0].placement)
-        self.assertEqual(6, result['new_table']['existing_bets'][0].wager)
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(8, existing_bet.placement)
+        self.assertEqual(6, existing_bet.wager)
 
     def test_vig_notification(self):
         req = {"table": {"existing_bets": [{"type": "Buy", "wager": 100, "placement": 10}],
@@ -150,9 +167,10 @@ class TestEngine(unittest.TestCase):
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(5, 5))
         self.assertEqual(1, len(result['new_table']['existing_bets']))
         self.assertEqual(0, len(result['returned']))
-        self.assertEqual(10, result['new_table']['existing_bets'][0].placement)
-        self.assertEqual(100, result['new_table']['existing_bets'][0].wager)
-        self.assertEqual(5, result['winners'][0]['vig_payed'])
+        existing_bet = result['new_table']['existing_bets'].copy().pop()
+        self.assertEqual(10, existing_bet.placement)
+        self.assertEqual(100, existing_bet.wager)
+        self.assertEqual(5, result['winners'].copy().pop().vig_paid)
         self.assertEqual(195, result['summary']['total_winnings_to_player'])
 
     def test_circuit(self):
@@ -163,7 +181,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(1, 3))
         self.assertEqual(4, result['new_table']['puck_location'])
-        self.assertEqual(4, result['new_table']['existing_bets'][0].placement)
+        self.assertEqual(4, result['new_table']['existing_bets'].copy().pop().placement)
         req = {"table":        json.loads(json.dumps(result['new_table'], cls=ComplexEncoder)),
                "instructions": {"set_odds": [{"type": "PassLine", "wager": 10, "placement": 4, "odds": 20}]},
                "dice":         [2, 2]}
@@ -173,7 +191,7 @@ class TestEngine(unittest.TestCase):
         self.assertNotIn('Exception', result)
         self.assertEqual(result['summary']['dice_outcome'], DiceOutcome(2, 2))
         self.assertIsNone(result['new_table']['puck_location'])
-        self.assertIsNone(result['new_table']['existing_bets'][0].placement)
+        self.assertIsNone(result['new_table']['existing_bets'].copy().pop().placement)
         self.assertEqual(result['summary']['total_winnings_to_player'], 50)
 
     def test_hash_returns_same_roll(self):
