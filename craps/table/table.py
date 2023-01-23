@@ -1,9 +1,9 @@
-from craps.bet import InvalidBetException, BetSignature, BetList, BadBetActionException
 from . import DuplicateBetException, ContractBetException
 from .bet import ToggleableBetAbstract, BetAbstract, PassLine, DontPass, Come, DontCome
 from .config import Config
 from .interface import TableInterface
 from .puck import Puck, PuckLocation
+from ..bet import InvalidBetException, BetSignature, BadBetActionException, BetSet
 
 
 class Table(TableInterface):
@@ -15,13 +15,13 @@ class Table(TableInterface):
     """
     config: Config  #: Table Configuration (rules)
     puck: Puck  #: The Point Puck on the table
-    bets: BetList  #: List of all bets on the table
-    returned_bets: BetList  #: List of all bets returned to the player
+    bets: BetSet  #: List of all bets on the table
+    returned_bets: BetSet  #: List of all bets returned to the player
 
     def __init__(self,
                  config: Config = None,
                  puck_location: PuckLocation = None,
-                 existing_bets: BetList = None):
+                 existing_bets: BetSet = None):
         """
         Constructor
 
@@ -39,14 +39,11 @@ class Table(TableInterface):
         if puck_location is not None:
             self.puck.place(puck_location)
         if existing_bets:
-            existing_bets = [BetAbstract.from_signature(signature=signature, table=self) for
-                             signature in existing_bets
-                             if isinstance(signature, (dict, BetSignature))]
-            for i, bet_a in enumerate(existing_bets):
-                if any(bet_a.same_type_and_place(bet_b) for bet_b in existing_bets[:i]):
-                    raise DuplicateBetException('Duplicate Bets found in existing bets')
-        self.bets = existing_bets if existing_bets else []
-        self.returned_bets = []
+            existing_bets = set(BetAbstract.from_signature(signature=signature, table=self) for
+                                signature in existing_bets
+                                if isinstance(signature, (dict, BetSignature)))
+        self.bets = existing_bets if existing_bets else set()
+        self.returned_bets = set()
 
     def get_valid_points(self):
         """
@@ -104,18 +101,17 @@ class Table(TableInterface):
                         f"Cannon place {bet.__class__.__name__} bet unless point is established")
             if any(bet.same_type_and_place(existing) for existing in self.bets):
                 raise DuplicateBetException(f"Cannot place additional {bet}")
-            self.bets.append(bet)
+            self.bets.add(bet)
 
     def _process_retrieve(self, bets: list[BetSignature] = None):
-        bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]
+        bets = set(BetAbstract.from_signature(signature=signature, table=self) for signature in bets)
         for bet in bets:
             if not bet.can_remove():
                 raise ContractBetException(f"Cannot retrieve contract bet {bet}")
             for existing_bet in self.bets:
                 if bet.same_type_and_place(existing_bet):
-                    self.returned_bets.append(existing_bet)
-            self.bets = [existing_bet for existing_bet in
-                         self.bets if not bet.same_type_and_place(existing_bet)]
+                    self.returned_bets.add(existing_bet)
+            self.bets.remove(bet)
 
     def _process_update(self, bets: list[BetSignature] = None):
         bets = [BetAbstract.from_signature(signature=signature, table=self) for signature in bets]

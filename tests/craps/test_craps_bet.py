@@ -1,6 +1,6 @@
 import unittest
 
-from craps.bet import BetStatus, BetSignature, get_bet_from_list, BetInterface
+from craps.bet import BetStatus, BetSignature, get_bet_from_set, BetInterface
 from craps.table.bet import PassLine, Place, Field
 
 
@@ -22,15 +22,15 @@ class TestCrapsBet(unittest.TestCase):
         self.assertFalse(sig.same_type_and_place(tuple_obj))
 
     def test_get_bet_from_list(self):
-        bet_list = [BetSignature(wager=10, type=PassLine, override_puck=BetStatus.ON),
-                    BetSignature(wager=10, type=Place, placement=4),
-                    BetSignature(wager=10, type=Place, placement=6),
-                    BetSignature(wager=10, type=Field),
-                    BetSignature(wager=25, type=Field),  # Duplicate Field bet for testing only
-                    ]
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=PassLine), BetInterface)
-        self.assertIsNone(get_bet_from_list(bet_list=bet_list, bet_type=Place, bet_placement=10))
-        self.assertIsInstance(get_bet_from_list(bet_list=bet_list, bet_type=Field), list)
+        bet_set = {BetSignature(wager=10, type=PassLine, override_puck=BetStatus.ON),
+                   BetSignature(wager=10, type=Place, placement=4),
+                   BetSignature(wager=10, type=Place, placement=6),
+                   BetSignature(wager=10, type=Field),
+                   BetSignature(wager=25, type=Field),  # Duplicate Field bet for testing only
+                   }
+        self.assertEqual(4, len(bet_set))
+        self.assertIsInstance(get_bet_from_set(bet_set=bet_set, bet_type=PassLine), BetInterface)
+        self.assertIsNone(get_bet_from_set(bet_set=bet_set, bet_type=Place, bet_placement=10))
 
 
 if __name__ == '__main__':

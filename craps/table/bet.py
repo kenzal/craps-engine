@@ -544,6 +544,7 @@ class DontPass(DontCome):
     """Don't Pass Bet"""
 
 
+@ignore_placement_for_compare
 class Field(BetAbstract):
     """Field Bet"""
     single_roll = True  #: if the bet only exists for a single roll
@@ -684,6 +685,7 @@ class Hardway(ToggleableBetAbstract):
         return self.wager * (7 if outcome.total() in [4, 10] else 9)
 
 
+@ignore_placement_for_compare
 class AnySeven(PropBetAbstract):
     """Any Seven Bet"""
 
@@ -696,6 +698,7 @@ class AnySeven(PropBetAbstract):
         return self.wager * 4
 
 
+@ignore_placement_for_compare
 class AnyCraps(PropBetAbstract):
     """Any Craps Bet"""
 
@@ -732,6 +735,7 @@ class Hop(PropBetAbstract):
                             placement=self.placement)
 
 
+@ignore_placement_for_compare
 class Horn(PropBetAbstract):
     """Multi-Bet: Horn Numbers"""
     multi_bet = 4
@@ -770,6 +774,7 @@ class HornHigh(Horn):
             else self._table.config.hop_easy_pay_to_one))
 
 
+@ignore_placement_for_compare
 class World(PropBetAbstract):
     """World Bet: Horn Bet or AnySeven Bet"""
     multi_bet = 5
@@ -788,6 +793,7 @@ class World(PropBetAbstract):
             else self._table.config.hop_easy_pay_to_one))
 
 
+@ignore_placement_for_compare
 class Craps3Way(PropBetAbstract):
     """Multi-Bet: 3-Way Craps (Hop the craps numbers)"""
     multi_bet = 3
@@ -803,6 +809,7 @@ class Craps3Way(PropBetAbstract):
             else self._table.config.hop_easy_pay_to_one))
 
 
+@ignore_placement_for_compare
 class CE(PropBetAbstract):
     """Multi-Bet: Any Craps Or Eleven"""
     multi_bet = 2
